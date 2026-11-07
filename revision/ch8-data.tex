@@ -1,0 +1,278 @@
+\chapterpage{Data processing}{Six problems in the shape candidates actually
+report from consulting-tech screens: parse records, validate them, group them,
+aggregate them, report the top few. Less algorithmic than the rest of the book
+and more likely to be what you face.}
+
+% ------------------------------------------------------------------
+\problem{Average salary by department}{Medium}
+
+Records are \texttt{"name,department,salary"}. Return the top $n$ departments
+by average salary as \texttt{"department(average)"}, average descending then
+name ascending. The average is integer division. Ignore any record that does
+not have three fields, has an empty department, or whose salary is not a whole
+number at least zero.
+
+\idea{Accumulate a \emph{total and a count} per department, never a running
+average. Compute each average once, at the end, from exact numbers.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static String[] topDepartments(String[] records, int n) {
+    if (records == null || n <= 0) return new String[0];
+    Map<String,long[]> tally = new HashMap<>();      // [total, count]
+
+    for (String record : records) {
+        if (record == null) continue;
+        String[] parts = record.split(",", -1);      // keep empty fields
+        if (parts.length != 3) continue;
+        String dept = parts[1].trim();
+        if (dept.isEmpty()) continue;
+        long salary;
+        try { salary = Long.parseLong(parts[2].trim()); }
+        catch (NumberFormatException e) { continue; }
+        if (salary < 0) continue;
+
+        long[] slot = tally.computeIfAbsent(dept, k -> new long[2]);
+        slot[0] += salary;
+        slot[1]++;
+    }
+    if (tally.isEmpty()) return new String[0];
+
+    List<String> names = new ArrayList<>(tally.keySet());
+    names.sort((a, b) -> {
+        long avgA = tally.get(a)[0] / tally.get(a)[1];
+        long avgB = tally.get(b)[0] / tally.get(b)[1];
+        if (avgA != avgB) return Long.compare(avgB, avgA);
+        return a.compareTo(b);
+    });
+
+    int size = Math.min(n, names.size());
+    String[] out = new String[size];
+    for (int i = 0; i < size; i++) {
+        long[] slot = tally.get(names.get(i));
+        out[i] = names.get(i) + "(" + (slot[0] / slot[1]) + ")";
+    }
+    return out;
+}
+\end{lstlisting}
+
+\cost{$O(R + D\log D)$ for $R$ records and $D$ departments.}
+\trap{Four of them, and each one is a real submission killer.
+\texttt{split(",")} without \texttt{-1} silently drops trailing empty fields,
+so \texttt{"a,x,"} looks like a two-field record instead of an invalid
+three-field one. An \texttt{int} total overflows. Averaging averages is wrong
+whenever departments differ in size. And a negative salary parses perfectly
+well, so \texttt{parseInt} succeeding is not the same as the record being
+valid.}
+\alsoknown{Task 2 of the assessment.}
+
+% ------------------------------------------------------------------
+\problem{Filter and total transactions}{Medium}
+
+Records are \texttt{"id,category,amount"} with the amount in cents. Return the
+total per category, but only for categories whose total is at least a
+threshold, sorted by total descending.
+
+\idea{One grouping pass, then filter, then sort. Doing the filter before the
+grouping is finished is the common error --- a category only crosses the
+threshold once all its rows are in.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static List<String> categoriesOver(String[] rows, long threshold) {
+    Map<String,Long> totals = new HashMap<>();
+    for (String row : rows) {
+        if (row == null) continue;
+        String[] parts = row.split(",", -1);
+        if (parts.length != 3) continue;
+        try {
+            totals.merge(parts[1].trim(),
+                         Long.parseLong(parts[2].trim()), Long::sum);
+        } catch (NumberFormatException ignored) { }
+    }
+
+    List<Map.Entry<String,Long>> kept = new ArrayList<>();
+    for (Map.Entry<String,Long> e : totals.entrySet())
+        if (e.getValue() >= threshold) kept.add(e);
+
+    kept.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+
+    List<String> out = new ArrayList<>();
+    for (Map.Entry<String,Long> e : kept)
+        out.add(e.getKey() + "=" + e.getValue());
+    return out;
+}
+\end{lstlisting}
+
+\cost{$O(R + C\log C)$.}
+\trap{Filtering inside the parsing loop. Also, \texttt{b.getValue().compareTo}
+on boxed \texttt{Long} is fine, but \texttt{(int)(b.getValue() -
+a.getValue())} is not --- the subtraction can overflow and the cast then
+reverses the order.}
+
+% ------------------------------------------------------------------
+\problem{Validate records and report the errors}{Medium}
+
+Given records \texttt{"id,email,age"}, return one message per invalid record in
+input order: \texttt{"line 3: bad age"}. A record is invalid if it has the
+wrong field count, an email with no \texttt{@}, or an age outside 0 to 150.
+Report only the first problem found in each record.
+
+\idea{A validation ladder: check in a fixed order and return the first failure.
+Keep the line number from the loop index, counting from 1.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static List<String> validate(String[] rows) {
+    List<String> errors = new ArrayList<>();
+    for (int i = 0; i < rows.length; i++) {
+        String problem = firstProblem(rows[i]);
+        if (problem != null) errors.add("line " + (i + 1) + ": " + problem);
+    }
+    return errors;
+}
+
+private static String firstProblem(String row) {
+    if (row == null) return "missing record";
+    String[] parts = row.split(",", -1);
+    if (parts.length != 3) return "wrong field count";
+    if (!parts[1].contains("@")) return "bad email";
+    int age;
+    try { age = Integer.parseInt(parts[2].trim()); }
+    catch (NumberFormatException e) { return "bad age"; }
+    if (age < 0 || age > 150) return "bad age";
+    return null;
+}
+\end{lstlisting}
+
+\cost{$O(R)$.}
+\trap{Line numbers are one-based in every message format anyone asks for, and
+the loop index is zero-based. Off by one here fails every test at once, which
+at least makes it easy to spot.}
+
+% ------------------------------------------------------------------
+\problem{Join two datasets on a key}{Medium}
+
+One array holds \texttt{"userId,name"}, another holds
+\texttt{"userId,orderTotal"}. Return \texttt{"name:total"} for every user
+present in both, summing a user's orders, sorted by total descending.
+
+\idea{Index the smaller side into a map, then stream the larger side against
+it. This is a hash join, and it is $O(n+m)$ where the nested-loop version is
+$O(nm)$.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static List<String> join(String[] users, String[] orders) {
+    Map<String,String> nameById = new HashMap<>();
+    for (String u : users) {
+        String[] p = u.split(",", -1);
+        if (p.length == 2) nameById.put(p[0].trim(), p[1].trim());
+    }
+
+    Map<String,Long> totalById = new HashMap<>();
+    for (String o : orders) {
+        String[] p = o.split(",", -1);
+        if (p.length != 2) continue;
+        String id = p[0].trim();
+        if (!nameById.containsKey(id)) continue;      // inner join
+        try { totalById.merge(id, Long.parseLong(p[1].trim()), Long::sum); }
+        catch (NumberFormatException ignored) { }
+    }
+
+    List<Map.Entry<String,Long>> rows = new ArrayList<>(totalById.entrySet());
+    rows.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+
+    List<String> out = new ArrayList<>();
+    for (Map.Entry<String,Long> e : rows)
+        out.add(nameById.get(e.getKey()) + ":" + e.getValue());
+    return out;
+}
+\end{lstlisting}
+
+\cost{$O(n+m)$ plus the sort.}
+\trap{Deciding what kind of join you were asked for. This one drops users
+with no orders and orders with no user. A left join would keep every user
+with a total of zero --- a different answer, and the statement will say
+which.}
+
+% ------------------------------------------------------------------
+\problem{Bucket events by hour and find the peak}{Medium}
+
+Each record is \texttt{"eventId,timestampSeconds"}. Count the events falling in
+each hour and return the busiest hour as an hour index, breaking ties by the
+earlier hour.
+
+\idea{The bucket key is \texttt{timestamp / 3600} --- integer division is the
+bucketing. Then a single scan for the maximum, taking \texttt{>} and not
+\texttt{>=} so the earliest hour wins a tie.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static long busiestHour(String[] events) {
+    Map<Long,Integer> perHour = new HashMap<>();
+    for (String e : events) {
+        String[] p = e.split(",", -1);
+        if (p.length != 2) continue;
+        try {
+            long hour = Long.parseLong(p[1].trim()) / 3600;
+            perHour.merge(hour, 1, Integer::sum);
+        } catch (NumberFormatException ignored) { }
+    }
+    if (perHour.isEmpty()) return -1;
+
+    long bestHour = Long.MAX_VALUE;
+    int bestCount = -1;
+    for (Map.Entry<Long,Integer> e : perHour.entrySet()) {
+        if (e.getValue() > bestCount
+                || (e.getValue() == bestCount && e.getKey() < bestHour)) {
+            bestCount = e.getValue();
+            bestHour = e.getKey();
+        }
+    }
+    return bestHour;
+}
+\end{lstlisting}
+
+\cost{$O(R)$.}
+\trap{Relying on iteration order to settle ties. \texttt{HashMap} order is
+unspecified and changes with the keys, so the tie-break has to be written
+out explicitly, as in the second clause above.}
+
+% ------------------------------------------------------------------
+\problem{Running balance per account}{Medium}
+
+Transactions arrive as \texttt{"account,amount"} in chronological order.
+Return, for each account, the lowest balance it ever reached.
+
+\idea{One pass with two maps, or one map of a small array. Update the running
+balance, then compare it to the stored minimum --- in that order, because the
+minimum has to include the transaction you just applied.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static Map<String,Long> lowestBalances(String[] transactions) {
+    Map<String,Long> balance = new HashMap<>();
+    Map<String,Long> lowest  = new HashMap<>();
+
+    for (String t : transactions) {
+        String[] p = t.split(",", -1);
+        if (p.length != 2) continue;
+        String account = p[0].trim();
+        long amount;
+        try { amount = Long.parseLong(p[1].trim()); }
+        catch (NumberFormatException e) { continue; }
+
+        long now = balance.getOrDefault(account, 0L) + amount;
+        balance.put(account, now);
+        lowest.merge(account, now, Math::min);
+    }
+    return lowest;
+}
+\end{lstlisting}
+
+\cost{$O(R)$ time, $O(A)$ space for $A$ accounts.}
+\trap{Seeding the minimum at \texttt{0} for every account. If an account only
+ever receives money its lowest balance is its first deposit, not zero --- and
+\texttt{merge} with no prior value stores the first balance, which is exactly
+right.}

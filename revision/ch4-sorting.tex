@@ -1,0 +1,234 @@
+\chapterpage{Sorting, intervals and comparators}{Seven problems. Writing a
+correct multi-key comparator under time pressure is a skill in itself, and
+interval sweeps are the most common ``medium'' in a screen.}
+
+% ------------------------------------------------------------------
+\problem{Sort by frequency, then by value}{Medium}
+
+Sort the array so that more frequent values come first, and equally frequent
+values come in ascending numeric order.
+\texttt{[1,1,2,2,2,3]} gives \texttt{[2,2,2,1,1,3]}.
+
+\idea{Count first, then sort the \emph{boxed} values with a two-key comparator.
+Primitive arrays cannot take a comparator, so boxing is required.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int[] sortByFrequency(int[] a) {
+    Map<Integer,Integer> freq = new HashMap<>();
+    for (int x : a) freq.merge(x, 1, Integer::sum);
+
+    Integer[] boxed = new Integer[a.length];
+    for (int i = 0; i < a.length; i++) boxed[i] = a[i];
+
+    Arrays.sort(boxed, (x, y) -> {
+        int fx = freq.get(x), fy = freq.get(y);
+        if (fx != fy) return Integer.compare(fy, fx);   // frequency desc
+        return Integer.compare(x, y);                   // value asc
+    });
+
+    int[] out = new int[a.length];
+    for (int i = 0; i < a.length; i++) out[i] = boxed[i];
+    return out;
+}
+\end{lstlisting}
+
+\cost{$O(n\log n)$ time, $O(n)$ space.}
+\trap{\texttt{Arrays.sort(int[], Comparator)} does not exist --- there is no
+such overload, and the compile error surprises people under pressure. Box to
+\texttt{Integer[]} or sort a \texttt{List<Integer>}.}
+
+% ------------------------------------------------------------------
+\problem{Merge overlapping intervals}{Medium}
+
+Given intervals as \texttt{[start, end]}, merge every pair that overlaps.
+\texttt{[[1,3],[2,6],[8,10]]} gives \texttt{[[1,6],[8,10]]}.
+
+\idea{Sort by start. Then one pass: either the next interval starts inside the
+one you are building, in which case stretch its end, or it does not, in which
+case close the current one and open a new one.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int[][] merge(int[][] intervals) {
+    if (intervals == null || intervals.length == 0) return new int[0][];
+    int[][] a = intervals.clone();
+    Arrays.sort(a, (x, y) -> Integer.compare(x[0], y[0]));
+
+    List<int[]> out = new ArrayList<>();
+    int[] current = new int[] {a[0][0], a[0][1]};
+    for (int i = 1; i < a.length; i++) {
+        if (a[i][0] <= current[1]) {
+            current[1] = Math.max(current[1], a[i][1]);
+        } else {
+            out.add(current);
+            current = new int[] {a[i][0], a[i][1]};
+        }
+    }
+    out.add(current);
+    return out.toArray(new int[0][]);
+}
+\end{lstlisting}
+
+\cost{$O(n\log n)$ time, $O(n)$ space.}
+\trap{\texttt{current[1] = a[i][1]} without the \texttt{Math.max} loses a
+fully contained interval: merging \texttt{[1,10]} with \texttt{[2,3]} must
+still end at 10. Also remember to add the last \texttt{current} after the
+loop.}
+
+% ------------------------------------------------------------------
+\problem{Can one person attend all meetings?}{Easy}
+
+Given meeting intervals, return \texttt{true} if none of them overlap.
+
+\idea{Sort by start; any overlap is then between neighbours.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static boolean canAttendAll(int[][] meetings) {
+    if (meetings == null || meetings.length < 2) return true;
+    int[][] a = meetings.clone();
+    Arrays.sort(a, (x, y) -> Integer.compare(x[0], y[0]));
+    for (int i = 1; i < a.length; i++)
+        if (a[i][0] < a[i - 1][1]) return false;
+    return true;
+}
+\end{lstlisting}
+
+\cost{$O(n\log n)$ time.}
+\trap{Whether touching intervals count as overlapping. \texttt{[1,5]} and
+\texttt{[5,9]} do not overlap if the end is exclusive --- hence \texttt{<} and
+not \texttt{<=}. The statement decides; read it.}
+
+% ------------------------------------------------------------------
+\problem{Minimum number of meeting rooms}{Medium}
+
+Return the largest number of meetings running at the same time.
+
+\idea{A sweep. Put every start and every end on a timeline, sort both, then walk
+them: a start raises the count, an end lowers it. Track the peak. Ends must
+be processed before starts at the same instant, since a room freed at 5 can
+be reused at 5.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int minRooms(int[][] meetings) {
+    if (meetings == null || meetings.length == 0) return 0;
+    int n = meetings.length;
+    int[] starts = new int[n], ends = new int[n];
+    for (int i = 0; i < n; i++) {
+        starts[i] = meetings[i][0];
+        ends[i]   = meetings[i][1];
+    }
+    Arrays.sort(starts);
+    Arrays.sort(ends);
+
+    int rooms = 0, peak = 0, e = 0;
+    for (int s = 0; s < n; s++) {
+        while (e < n && ends[e] <= starts[s]) { rooms--; e++; }
+        rooms++;
+        peak = Math.max(peak, rooms);
+    }
+    return peak;
+}
+\end{lstlisting}
+
+\cost{$O(n\log n)$ time, $O(n)$ space.}
+\trap{\texttt{ends[e] < starts[s]} instead of \texttt{<=} books a second room
+for back-to-back meetings. The two arrays are sorted independently on
+purpose --- the pairing between a particular start and end does not matter.}
+
+% ------------------------------------------------------------------
+\problem{Insert an interval}{Medium}
+
+The intervals are already sorted and non-overlapping. Insert a new one, merging
+where it overlaps.
+
+\idea{Three phases, no sorting needed: copy everything that ends before the new
+one starts, absorb everything that overlaps into a widened interval, then
+copy the rest.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int[][] insert(int[][] intervals, int[] newInterval) {
+    List<int[]> out = new ArrayList<>();
+    int i = 0, n = intervals.length;
+    int start = newInterval[0], end = newInterval[1];
+
+    while (i < n && intervals[i][1] < start) out.add(intervals[i++]);
+
+    while (i < n && intervals[i][0] <= end) {
+        start = Math.min(start, intervals[i][0]);
+        end   = Math.max(end,   intervals[i][1]);
+        i++;
+    }
+    out.add(new int[] {start, end});
+
+    while (i < n) out.add(intervals[i++]);
+    return out.toArray(new int[0][]);
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time --- the input is already sorted, so do not re-sort it.}
+\trap{Adding the merged interval inside the second loop, which emits it once
+per overlap. It goes in exactly once, after the loop.}
+
+% ------------------------------------------------------------------
+\problem{Sort employees by salary then name}{Easy}
+
+Sort records by salary descending, and alphabetically for equal salaries. A
+pure comparator drill --- this exact shape appears in data-processing tasks.
+
+\idea{The \texttt{Comparator} factory methods compose. Build the ordering
+declaratively rather than hand-rolling the branches.}
+
+\solheading
+\begin{lstlisting}[style=java]
+record Employee(String name, int salary) {}
+
+public static void sortEmployees(List<Employee> staff) {
+    staff.sort(Comparator.comparingInt(Employee::salary).reversed()
+                         .thenComparing(Employee::name));
+}
+
+// the hand-written equivalent, when you cannot remember the fluent form
+public static void sortEmployeesManually(List<Employee> staff) {
+    staff.sort((a, b) -> {
+        if (a.salary() != b.salary())
+            return Integer.compare(b.salary(), a.salary());
+        return a.name().compareTo(b.name());
+    });
+}
+\end{lstlisting}
+
+\cost{$O(n\log n)$.}
+\trap{\texttt{.reversed()} reverses \emph{everything composed so far}. Chaining
+it on after \texttt{thenComparing(name)} reverses the name order as well. Put
+\texttt{reversed()} on the salary key alone, as above.}
+
+% ------------------------------------------------------------------
+\problem{Kth largest element}{Medium}
+
+Return the $k$th largest value in an unsorted array (the $k$th in sorted
+descending order, duplicates counted).
+
+\idea{Keep a min-heap of size $k$. The smallest thing in it is, once you have
+seen everything, the $k$th largest overall.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int kthLargest(int[] a, int k) {
+    PriorityQueue<Integer> heap = new PriorityQueue<>();   // min-heap
+    for (int x : a) {
+        heap.offer(x);
+        if (heap.size() > k) heap.poll();
+    }
+    return heap.peek();
+}
+\end{lstlisting}
+
+\cost{$O(n\log k)$ time, $O(k)$ space. Sorting is $O(n\log n)$ and perfectly
+acceptable when $k$ is close to $n$.}
+\trap{Using a max-heap and polling $k$ times is $O(n + k\log n)$ to build and
+drain --- fine, but it needs all $n$ elements in memory. The size-$k$ min-heap
+is the answer when the input is a stream.}

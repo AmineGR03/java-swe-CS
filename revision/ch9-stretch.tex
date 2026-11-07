@@ -1,0 +1,243 @@
+\chapterpage{Stretch}{Five problems above the bar. Nothing here is likely in a
+seventy-minute screen for a final-year internship, and two of them were cut
+from the assessment for exactly that reason. Work them when the first eight
+chapters are comfortable --- the point is that a hard problem on the day
+should feel familiar rather than alarming.}
+
+% ------------------------------------------------------------------
+\problem{Minimum travel time with k free roads}{Hard}
+
+Cities $0 \ldots n-1$ are joined by bidirectional roads $\{u, v, t\}$. You hold
+$k$ passes; using one on a road makes that road cost 0. Return the least time
+from city 0 to city $n-1$, or $-1$.
+
+\idea{The state you search is not a city, it is a \emph{pair}: the city, and how
+many passes you have spent. Build $k+1$ copies of the graph --- layers --- and
+run one Dijkstra over the lot. From $(u,p)$ each road either costs its time and
+keeps you in layer $p$, or costs nothing and drops you into layer $p+1$.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int minTravelTime(int n, int[][] roads, int k) {
+    if (n == 1) return 0;
+    int layers = (int) Math.max(0L, Math.min((long) k, (long) n - 1));
+
+    List<int[]>[] adj = new List[n];
+    for (int i = 0; i < n; i++) adj[i] = new ArrayList<>();
+    for (int[] r : roads) {
+        adj[r[0]].add(new int[] {r[1], r[2]});
+        if (r[0] != r[1]) adj[r[1]].add(new int[] {r[0], r[2]});
+    }
+
+    long[][] dist = new long[n][layers + 1];
+    for (long[] row : dist) Arrays.fill(row, Long.MAX_VALUE);
+    dist[0][0] = 0;
+
+    // {cost, city, passesUsed}
+    PriorityQueue<long[]> pq =
+        new PriorityQueue<>((a, b) -> Long.compare(a[0], b[0]));
+    pq.add(new long[] {0, 0, 0});
+
+    while (!pq.isEmpty()) {
+        long[] top = pq.poll();
+        long cost = top[0];
+        int u = (int) top[1], used = (int) top[2];
+        if (cost > dist[u][used]) continue;          // stale entry
+        if (u == n - 1) return (int) cost;
+
+        for (int[] edge : adj[u]) {
+            int v = edge[0];
+            long paid = cost + edge[1];
+            if (paid < dist[v][used]) {
+                dist[v][used] = paid;
+                pq.add(new long[] {paid, v, used});
+            }
+            if (used < layers && cost < dist[v][used + 1]) {
+                dist[v][used + 1] = cost;
+                pq.add(new long[] {cost, v, used + 1});
+            }
+        }
+    }
+    return -1;
+}
+\end{lstlisting}
+
+\cost{$O(E \cdot K \log(V \cdot K))$ with $K = \min(k, n-1) + 1$.}
+\trap{Three. $k$ can be $10^9$, so cap the layers at $n-1$ --- a simple path
+uses no more roads than that, and without the cap you allocate a billion rows.
+Distances overflow \texttt{int}, so accumulate in \texttt{long}. And the
+tempting greedy --- find the shortest path, then zero its $k$ heaviest edges
+--- is simply wrong: the best route when you have passes is often a different
+route entirely.}
+\alsoknown{``Cheapest flights with k stops'' and ``minimum cost path with k
+refuels'' are the same layered-state idea.}
+
+% ------------------------------------------------------------------
+\problem{Expiring files}{Hard}
+
+Extend the Part B \texttt{CloudStorage} so files can be given a lifetime.
+\texttt{addFileAt(timestamp, user, name, size, ttl)} creates a file alive over
+$[\textit{timestamp}, \textit{timestamp}+\textit{ttl})$;
+\texttt{getFileSizeAt}, \texttt{deleteFileAt} and \texttt{getNLargestAt} see
+only files alive at their timestamp. An expired file frees its owner's
+capacity.
+
+\idea{The level attacks the incremental \texttt{used} counter that made the
+earlier levels cheap: bytes now free themselves with no operation to hook.
+Rather than recompute usage on every query, make expiry \emph{lazy} --- each
+timestamped call first deletes everything already dead at its timestamp,
+through the ordinary delete path, and then delegates to the untimed method
+that already exists. One notion of ``the files that exist'', and every earlier
+level untouched.}
+
+\solheading
+\begin{lstlisting}[style=java]
+// FileEntry gains: final long expiresAt;   (Long.MAX_VALUE = never)
+
+public Integer addFileAt(int timestamp, String user,
+                         String name, int size, int ttl) {
+    if (ttl <= 0 || timestamp < 0) return null;
+    purge(timestamp);
+    // long, because timestamp + ttl overflows int near Integer.MAX_VALUE
+    return addEntry(user, name, size, (long) timestamp + (long) ttl);
+}
+
+public Integer getFileSizeAt(int timestamp, String name) {
+    purge(timestamp);
+    return getFileSize(name);
+}
+
+/** Drops every file dead at `now`, crediting each owner's capacity. */
+private void purge(long now) {
+    List<String> expired = null;
+    for (Map.Entry<String,FileEntry> e : files.entrySet())
+        if (e.getValue().expiresAt <= now) {
+            if (expired == null) expired = new ArrayList<>();
+            expired.add(e.getKey());
+        }
+    if (expired == null) return;
+    for (String name : expired) removeEntry(name);   // credits the owner
+}
+\end{lstlisting}
+
+\cost{$O(F)$ per timestamped call in the worst case, $O(1)$ amortised per file
+since each file is purged once.}
+\trap{Collecting the dead keys before deleting --- removing from
+\texttt{files} while iterating it throws
+\texttt{ConcurrentModificationException}. Storing an \emph{absolute} expiry
+rather than a TTL, so backup and restore do not restart a lifetime. And
+treating the interval as closed: a file with \texttt{ttl} 10 created at 0 is
+dead \emph{at} 10, not after it.}
+
+% ------------------------------------------------------------------
+\problem{LRU cache}{Hard}
+
+A fixed-capacity cache with $O(1)$ \texttt{get} and \texttt{put}. When it is
+full, the least recently used entry is evicted. A \texttt{get} counts as a use.
+
+\idea{\texttt{LinkedHashMap} does this in a dozen lines: construct it in
+access-order mode and override \texttt{removeEldestEntry}. Know the manual
+version too --- a hash map to nodes plus a doubly linked list --- because
+interviewers sometimes ban the shortcut.}
+
+\solheading
+\begin{lstlisting}[style=java]
+class LruCache<K, V> extends LinkedHashMap<K, V> {
+    private final int capacity;
+
+    LruCache(int capacity) {
+        // initialCapacity, loadFactor, accessOrder=true
+        super(16, 0.75f, true);
+        this.capacity = capacity;
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+        return size() > capacity;
+    }
+}
+\end{lstlisting}
+
+\cost{$O(1)$ expected for both operations.}
+\trap{The third constructor argument. Left at \texttt{false} --- the default
+--- you get insertion order, which evicts the oldest \emph{inserted} entry and
+makes it an FIFO cache, not an LRU one. The bug passes any test that never
+re-reads a key.}
+
+% ------------------------------------------------------------------
+\problem{Coin change}{Hard}
+
+Given coin denominations and a target, return the fewest coins that sum to it,
+or $-1$. Each denomination may be used any number of times.
+
+\idea{Bottom-up dynamic programming over the amount. The best way to make
+$a$ is one coin on top of the best way to make $a - \textit{coin}$, minimised
+over the coins. Fill the table upwards so every subproblem is already solved
+when you need it.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int coinChange(int[] coins, int amount) {
+    if (amount < 0) return -1;
+    int[] best = new int[amount + 1];
+    Arrays.fill(best, Integer.MAX_VALUE);
+    best[0] = 0;                               // zero coins make zero
+
+    for (int a = 1; a <= amount; a++)
+        for (int coin : coins) {
+            if (coin <= 0 || coin > a) continue;
+            if (best[a - coin] == Integer.MAX_VALUE) continue;
+            best[a] = Math.min(best[a], best[a - coin] + 1);
+        }
+
+    return best[amount] == Integer.MAX_VALUE ? -1 : best[amount];
+}
+\end{lstlisting}
+
+\cost{$O(\textit{amount} \times \textit{coins})$ time, $O(\textit{amount})$
+space.}
+\trap{The greedy ``take the biggest coin that fits'' is wrong on coin sets
+like $\{1, 3, 4\}$, where making 6 greedily takes $4+1+1$ and the answer is
+$3+3$. It happens to work on real currency, which is why people trust it. Also
+guard \texttt{best[a - coin] == MAX\_VALUE} before adding one, or it
+overflows to a negative and poisons the table.}
+
+% ------------------------------------------------------------------
+\problem{Longest increasing subsequence}{Hard}
+
+Return the length of the longest strictly increasing subsequence --- the
+elements need not be adjacent. \texttt{[10,9,2,5,3,7,101,18]} gives 4.
+
+\idea{Keep a list \texttt{tails}, where \texttt{tails[i]} is the smallest value
+that can end an increasing subsequence of length $i+1$. That list is always
+sorted, so each new element is placed by binary search: it either extends the
+list or lowers an existing tail, making future extensions easier. The list is
+not itself a valid subsequence --- only its \emph{length} is the answer.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int lengthOfLIS(int[] a) {
+    if (a == null || a.length == 0) return 0;
+    int[] tails = new int[a.length];
+    int size = 0;
+
+    for (int x : a) {
+        int lo = 0, hi = size;
+        while (lo < hi) {                      // first tail >= x
+            int mid = (lo + hi) >>> 1;
+            if (tails[mid] < x) lo = mid + 1;
+            else hi = mid;
+        }
+        tails[lo] = x;
+        if (lo == size) size++;
+    }
+    return size;
+}
+\end{lstlisting}
+
+\cost{$O(n\log n)$ time, $O(n)$ space. The straightforward DP is $O(n^2)$ and
+is the right answer below a few thousand elements.}
+\trap{\texttt{(lo + hi) / 2} overflows for huge bounds; \texttt{>>> 1} is the
+habit worth having. And for a \emph{non-strictly} increasing subsequence the
+binary search changes to ``first tail $>$ x'' --- a one-character difference
+that silently changes the answer.}

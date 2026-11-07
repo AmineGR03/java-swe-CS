@@ -1,0 +1,20 @@
+# Build output — recreated by run.ps1 / run.sh on every run
+out/
+*.class
+
+# Exam attempts: your own submissions, reports and staging copies
+attempts/
+
+# LaTeX intermediates (the built PDF is committed)
+revision/*.aux
+revision/*.log
+revision/*.out
+revision/*.toc
+revision/*.synctex.gz
+revision/main.pdf
+
+# Editor and tooling
+.claude/
+.idea/
+.vscode/
+*.iml

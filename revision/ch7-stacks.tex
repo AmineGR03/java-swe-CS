@@ -1,0 +1,178 @@
+\chapterpage{Stacks and queues}{Five problems. A stack is the right answer
+whenever the most recent unresolved thing is the one you need next.}
+
+% ------------------------------------------------------------------
+\problem{Valid parentheses}{Easy}
+
+Given a string of \texttt{()}, \texttt{[]} and \texttt{\{\}}, decide whether
+every bracket is closed by the matching kind, in the right order.
+
+\idea{Push openers. On a closer, the top of the stack must be its partner. At
+the end the stack must be empty.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static boolean isValid(String s) {
+    if (s == null) return true;
+    Deque<Character> stack = new ArrayDeque<>();
+    for (char c : s.toCharArray()) {
+        switch (c) {
+            case '(' : case '[' : case '{' : stack.push(c); break;
+            case ')' : if (stack.isEmpty() || stack.pop() != '(') return false; break;
+            case ']' : if (stack.isEmpty() || stack.pop() != '[') return false; break;
+            case '}' : if (stack.isEmpty() || stack.pop() != '{') return false; break;
+            default  : break;    // ignore anything else
+        }
+    }
+    return stack.isEmpty();
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(n)$ space.}
+\trap{Two endings get forgotten. Popping an empty stack on a stray closer
+throws, so test \texttt{isEmpty()} first; and leaving the stack non-empty at
+the end means unclosed openers, which is also invalid.}
+
+% ------------------------------------------------------------------
+\problem{Evaluate reverse Polish notation}{Medium}
+
+Evaluate tokens like \texttt{["2","1","+","3","*"]}, which means
+$(2+1)\times 3 = 9$.
+
+\idea{Push numbers. On an operator, pop two, apply, push the result. The first
+value popped is the right-hand operand.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int evalRPN(String[] tokens) {
+    Deque<Integer> stack = new ArrayDeque<>();
+    for (String t : tokens) {
+        switch (t) {
+            case "+": case "-": case "*": case "/": {
+                int right = stack.pop();           // order matters
+                int left  = stack.pop();
+                stack.push(apply(left, right, t));
+                break;
+            }
+            default:
+                stack.push(Integer.parseInt(t));
+        }
+    }
+    return stack.pop();
+}
+
+private static int apply(int a, int b, String op) {
+    switch (op) {
+        case "+": return a + b;
+        case "-": return a - b;
+        case "*": return a * b;
+        default : return a / b;
+    }
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(n)$ space.}
+\trap{Popping the operands in the wrong order. It is invisible for
+\texttt{+} and \texttt{*} and wrong for \texttt{-} and \texttt{/}, so the bug
+survives your first two test cases.}
+
+% ------------------------------------------------------------------
+\problem{Next greater element}{Medium}
+
+For every element, find the first element to its right that is larger, or
+$-1$. \texttt{[2,1,2,4]} gives \texttt{[4,2,4,-1]}.
+
+\idea{A monotonic stack of \emph{indices} still waiting for an answer. When a
+new value arrives, it resolves every waiting index smaller than it. Each
+index is pushed and popped once.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int[] nextGreater(int[] a) {
+    int n = a.length;
+    int[] out = new int[n];
+    Arrays.fill(out, -1);
+    Deque<Integer> waiting = new ArrayDeque<>();   // indices
+
+    for (int i = 0; i < n; i++) {
+        while (!waiting.isEmpty() && a[waiting.peek()] < a[i])
+            out[waiting.pop()] = a[i];
+        waiting.push(i);
+    }
+    return out;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time --- the inner \texttt{while} is amortised, since every index
+leaves the stack at most once. $O(n)$ space.}
+\trap{The nested-loop version is $O(n^2)$ and looks so natural that people
+write it without noticing. Also store indices, not values, or you cannot
+write the answer back to the right slot.}
+\alsoknown{``Daily temperatures'', where the answer is the gap \texttt{i - j}
+rather than the value.}
+
+% ------------------------------------------------------------------
+\problem{Min stack}{Medium}
+
+A stack that also reports its minimum in $O(1)$.
+
+\idea{Keep a second stack holding the minimum \emph{as of} each push. Pushing
+records the smaller of the new value and the current minimum; popping
+discards both in step, so the two stacks stay aligned.}
+
+\solheading
+\begin{lstlisting}[style=java]
+class MinStack {
+    private final Deque<Integer> values = new ArrayDeque<>();
+    private final Deque<Integer> minima = new ArrayDeque<>();
+
+    void push(int x) {
+        values.push(x);
+        minima.push(minima.isEmpty() ? x : Math.min(x, minima.peek()));
+    }
+
+    int pop() {
+        minima.pop();
+        return values.pop();
+    }
+
+    int top()     { return values.peek(); }
+    int getMin()  { return minima.peek(); }
+}
+\end{lstlisting}
+
+\cost{$O(1)$ for every operation, $O(n)$ space.}
+\trap{Keeping a single \texttt{int min} field instead. It is right until you
+pop the minimum, and then there is no way to recover the previous one without
+scanning.}
+
+% ------------------------------------------------------------------
+\problem{Simplify a Unix path}{Medium}
+
+Turn \texttt{"/a/./b/../../c/"} into \texttt{"/c"}. Handle \texttt{.},
+\texttt{..} and repeated slashes.
+
+\idea{Split on slashes and push each real component. \texttt{..} pops,
+\texttt{.} and empty components are skipped. Join what is left.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static String simplify(String path) {
+    Deque<String> parts = new ArrayDeque<>();     // used as a list
+    for (String part : path.split("/")) {
+        if (part.isEmpty() || part.equals(".")) continue;
+        if (part.equals("..")) parts.pollLast();  // no-op when empty
+        else parts.addLast(part);
+    }
+    if (parts.isEmpty()) return "/";
+    StringBuilder out = new StringBuilder();
+    for (String part : parts) out.append('/').append(part);
+    return out.toString();
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(n)$ space.}
+\trap{\texttt{..} at the root must do nothing, not throw ---
+\texttt{pollLast} returns \texttt{null} on an empty deque where
+\texttt{removeLast} throws. And the result for an empty stack is
+\texttt{"/"}, not \texttt{""}.}

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Java Assessment</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-screen="loading">
+
+<div class="boot" id="boot">Loading the exam&hellip;</div>
+
+<!-- ------------------------------------------------------------------ -->
+<main class="screen screen-start" id="screen-start">
+  <div class="start">
+    <p class="eyebrow">Timed technical assessment</p>
+    <h1>Java Software Engineering Assessment</h1>
+    <p class="lede">
+      Two parts, taken independently. Pick one to begin. The clock starts the
+      moment you do, runs on the server, and cannot be paused, reset or
+      reloaded away.
+    </p>
+
+    <div class="parts" id="parts"></div>
+
+    <div class="ground-rules">
+      <h2>How this works</h2>
+      <ul>
+        <li><strong>The clock is authoritative.</strong> It is kept by the server, not the page. Closing the tab, reloading or stopping the page's JavaScript does not stop it.</li>
+        <li><strong>At zero, you are submitted.</strong> Whatever was last autosaved is graded automatically. Your work is saved every couple of seconds.</li>
+        <li><strong>No test results until you submit.</strong> During the attempt the only feedback is from <code>javac</code> — compile errors, nothing about correctness.</li>
+        <li><strong>One submission.</strong> Submitting ends the part; you cannot reopen it.</li>
+        <li><strong>No outside help.</strong> No internet, no AI, no IDE, no looking at <code>tests/</code> or <code>solutions/</code>. The environment does not police your filesystem — the honest constraint is you.</li>
+      </ul>
+    </div>
+
+    <p class="demo-banner hidden" id="demo-banner"></p>
+  </div>
+</main>
+
+<!-- ------------------------------------------------------------------ -->
+<div class="screen screen-exam" id="screen-exam">
+  <header class="bar">
+    <div class="bar-left">
+      <span class="part-badge" id="exam-part">Part</span>
+      <nav class="tabs" id="tabs"></nav>
+    </div>
+    <div class="bar-right">
+      <div class="clock" id="clock">
+        <span class="clock-time" id="clock-time">--:--</span>
+        <span class="clock-label" id="clock-label">remaining</span>
+      </div>
+      <button class="btn btn-primary" id="submit-btn">Submit part</button>
+    </div>
+  </header>
+  <div class="clock-track"><div class="clock-fill" id="clock-fill"></div></div>
+
+  <div class="split" id="split">
+    <section class="pane pane-statement" id="statement"></section>
+    <div class="handle" id="handle" title="Drag to resize"></div>
+    <section class="pane pane-editor">
+      <div class="editor-bar">
+        <span class="filename" id="filename">&nbsp;</span>
+        <span class="save-state" id="save-state"></span>
+        <span class="grow"></span>
+        <span class="shortcuts">Ctrl+S save &middot; Ctrl+Enter compile</span>
+        <button class="btn" id="compile-btn">Compile check</button>
+      </div>
+      <div class="editor" id="editor">
+        <div class="gutter" id="gutter"></div>
+        <textarea id="code" spellcheck="false" autocomplete="off" autocapitalize="off"
+                  autocorrect="off" wrap="off"></textarea>
+      </div>
+      <div class="console" id="console">
+        <div class="console-bar">
+          <strong>javac</strong>
+          <span class="console-hint">compile errors only &mdash; no test results until you submit</span>
+          <span class="grow"></span>
+          <button class="btn btn-ghost" id="console-close">Hide</button>
+        </div>
+        <pre id="console-out"></pre>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ------------------------------------------------------------------ -->
+<main class="screen screen-result" id="screen-result">
+  <div class="result" id="result"></div>
+</main>
+
+<!-- ------------------------------------------------------------------ -->
+<div class="overlay hidden" id="overlay">
+  <div class="dialog" id="dialog"></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=2.2cm,top=2.4cm,bottom=2.4cm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[hidelinks,bookmarks,bookmarksnumbered]{hyperref}
+
+% ----------------------------------------------------------------- colours
+\definecolor{ink}{HTML}{15171C}
+\definecolor{accent}{HTML}{1D4ED8}
+\definecolor{muted}{HTML}{5C6370}
+\definecolor{rule}{HTML}{D3D7DE}
+\definecolor{codebg}{HTML}{F6F7F9}
+\definecolor{kw}{HTML}{0B5FA5}
+\definecolor{cm}{HTML}{6A7380}
+\definecolor{st}{HTML}{9B2C2C}
+\definecolor{bad}{HTML}{B42318}
+\definecolor{ok}{HTML}{1A7F37}
+\definecolor{easybg}{HTML}{E7F6EC}
+\definecolor{medbg}{HTML}{FDF3DC}
+\definecolor{hardbg}{HTML}{FBE9E7}
+
+\hypersetup{pdftitle={Java Coding Interview - Revision Book},
+            pdfauthor={Assessment},
+            pdfsubject={60 worked problems for a CodeSignal-style Java screen}}
+
+% ----------------------------------------------------------------- listings
+\lstdefinestyle{java}{
+  language=Java,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{kw}\bfseries,
+  commentstyle=\color{cm}\itshape,
+  stringstyle=\color{st},
+  numbers=left,
+  numberstyle=\tiny\color{muted},
+  numbersep=9pt,
+  backgroundcolor=\color{codebg},
+  frame=leftline,
+  framesep=7pt,
+  framerule=1.1pt,
+  rulecolor=\color{accent},
+  xleftmargin=18pt,
+  breaklines=true,
+  breakatwhitespace=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  tabsize=4,
+  aboveskip=8pt,
+  belowskip=8pt,
+}
+\lstdefinestyle{plain}{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=leftline,
+  framesep=7pt,
+  framerule=1.1pt,
+  rulecolor=\color{rule},
+  xleftmargin=10pt,
+  breaklines=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  aboveskip=7pt,
+  belowskip=7pt,
+}
+\lstset{style=java}
+
+% ----------------------------------------------------------------- headings
+\titleformat{\section}{\Large\bfseries\color{accent}}{\thesection.}{0.6em}{}
+\titlespacing*{\section}{0pt}{0pt}{14pt}
+\newcommand{\chapterpage}[2]{\clearpage\section{#1}\noindent\textit{\color{muted}#2}\par\medskip}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{muted}Java Coding Interview --- Revision Book}
+\fancyhead[R]{\small\color{muted}\thepage}
+
+% ----------------------------------------------------------------- problems
+\newcounter{probnum}
+% NB: \tag is taken by amsmath, hence \dchip.
+\newcommand{\dchip}[2]{\colorbox{#1}{\small\textsf{\,#2\,}}}
+\newcommand{\difficulty}[1]{%
+  \ifnum\pdfstrcmp{#1}{Easy}=0 \dchip{easybg}{Easy}\fi
+  \ifnum\pdfstrcmp{#1}{Medium}=0 \dchip{medbg}{Medium}\fi
+  \ifnum\pdfstrcmp{#1}{Hard}=0 \dchip{hardbg}{Hard}\fi
+}
+\newcommand{\problem}[2]{%
+  \refstepcounter{probnum}%
+  \par\medskip\noindent
+  \rule{\linewidth}{0.4pt}\par\smallskip
+  {\large\bfseries P\theprobnum.\ #1}\hfill\difficulty{#2}\par\smallskip
+  \addcontentsline{toc}{subsection}{P\theprobnum.\ #1}%
+  \nopagebreak
+}
+\newcommand{\solheading}{\par\smallskip\noindent\textbf{\color{accent}Solution}\par\nopagebreak}
+\newcommand{\idea}[1]{\par\noindent\textbf{Idea.}\ #1\par}
+\newcommand{\cost}[1]{\par\noindent\textbf{Cost.}\ #1\par}
+\newcommand{\trap}[1]{\par\smallskip\noindent\textbf{\color{bad}Trap.}\ #1\par}
+\newcommand{\alsoknown}[1]{\par\noindent{\small\color{muted}Also appears as: #1}\par}
+
+\emergencystretch=2.5em
+\hbadness=2000
+
+\setlist[itemize]{leftmargin=1.2em,itemsep=2pt,topsep=4pt}
+\setlist[enumerate]{leftmargin=1.5em,itemsep=2pt,topsep=4pt}
+
+\begin{document}
+
+% ----------------------------------------------------------------- title
+\begin{titlepage}
+\centering
+\vspace*{3.5cm}
+{\Huge\bfseries Java Coding Interview\par}
+\vspace{0.5cm}
+{\Huge\bfseries Revision Book\par}
+\vspace{1.2cm}
+{\large\color{muted} 60 worked problems for a CodeSignal-style screen\par}
+\vspace{0.3cm}
+{\large\color{muted} Final-year engineering level\par}
+\vspace{2.5cm}
+\rule{8cm}{1pt}\par
+\vspace{2.5cm}
+{\color{muted}
+Every problem has a complete Java solution, its complexity,\\[2pt]
+and the mistake that most often costs the points.\par}
+\vfill
+{\small\color{muted} Companion to \texttt{ASSESSMENT.md} --- work the book first, sit the assessment second.\par}
+\end{titlepage}
+
+% ----------------------------------------------------------------- front
+\setcounter{page}{1}
+\section*{How to use this book}
+\addcontentsline{toc}{section}{How to use this book}
+
+The screen you are preparing for is reported to be four problems in seventy
+minutes on CodeSignal, with tasks in the range of \emph{array manipulation} and
+\emph{data processing: calculating averages, filtering data}. That is the bar.
+It is not a competitive-programming bar, and almost nothing in rounds like this
+needs dynamic programming or graph theory.
+
+What it does need is that you write correct Java \emph{quickly}, without
+stopping to remember how a \texttt{HashMap} iterates or what
+\texttt{split(",")} does to trailing empty fields. Speed on easy and medium
+problems is worth far more than the ability to crack one hard one.
+
+\paragraph{A working method.}
+\begin{enumerate}
+  \item Read the whole statement before typing. Note every edge case it names:
+        \texttt{null}, empty, ties, bounds. They are in the statement because
+        they are in the tests.
+  \item Say the approach out loud in one sentence. If you cannot, you do not
+        have one yet.
+  \item Write the happy path. Then go back and add the edge cases you noted.
+  \item Re-read the statement against your code before moving on. The most
+        expensive bug in a timed test is the one you never look for.
+\end{enumerate}
+
+\paragraph{How to drill.} Give yourself the time budget printed on each
+difficulty: Easy 8 minutes, Medium 15, Hard 25. Write the solution without
+looking. Then read the \textbf{Trap} note --- it is the thing that actually
+breaks submissions, and it is worth more than the solution itself.
+
+\paragraph{Chapters 1 to 8 are the exam.} Chapter 9 is deliberately above the
+bar. Work it only when the rest is comfortable; it is there so that a hard
+problem on the day does not surprise you.
+
+\clearpage
+\tableofcontents
+\clearpage
+
+\IfFileExists{ch0-toolkit.tex}{\input{ch0-toolkit}}{}
+\IfFileExists{ch1-strings.tex}{\input{ch1-strings}}{}
+\IfFileExists{ch2-arrays.tex}{\input{ch2-arrays}}{}
+\IfFileExists{ch3-hashing.tex}{\input{ch3-hashing}}{}
+\IfFileExists{ch4-sorting.tex}{\input{ch4-sorting}}{}
+\IfFileExists{ch5-matrix.tex}{\input{ch5-matrix}}{}
+\IfFileExists{ch6-recursion.tex}{\input{ch6-recursion}}{}
+\IfFileExists{ch7-stacks.tex}{\input{ch7-stacks}}{}
+\IfFileExists{ch8-data.tex}{\input{ch8-data}}{}
+\IfFileExists{ch9-stretch.tex}{\input{ch9-stretch}}{}
+
+\end{document}

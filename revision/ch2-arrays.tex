@@ -1,0 +1,232 @@
+\chapterpage{Arrays and two pointers}{Eight problems. The two-pointer idea --- a
+read index and a write index, or two ends closing in --- turns a great many
+quadratic solutions linear.}
+
+% ------------------------------------------------------------------
+\problem{Move zeros to the end}{Easy}
+
+Move every zero to the end of the array, keeping the order of the non-zero
+elements. Do it in place. \texttt{[0,1,0,3,12]} becomes \texttt{[1,3,12,0,0]}.
+
+\idea{A write pointer. Copy every non-zero forward to the write position, then
+fill the tail with zeros.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static void moveZeros(int[] a) {
+    if (a == null) return;
+    int write = 0;
+    for (int read = 0; read < a.length; read++)
+        if (a[read] != 0) a[write++] = a[read];
+    while (write < a.length) a[write++] = 0;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space.}
+\trap{Swapping instead of copying also works, but only if you swap with the
+write pointer and not with the end of the array --- swapping with the end
+destroys the relative order.}
+
+% ------------------------------------------------------------------
+\problem{Remove duplicates from a sorted array}{Easy}
+
+The array is sorted ascending. Compact it in place so each value appears once,
+and return the new length. The elements past that length do not matter.
+
+\idea{Same write pointer. Because the array is sorted, a duplicate is always
+adjacent to its twin, so compare each element with the last one you kept.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int dedupeSorted(int[] a) {
+    if (a == null || a.length == 0) return 0;
+    int write = 1;
+    for (int read = 1; read < a.length; read++)
+        if (a[read] != a[write - 1]) a[write++] = a[read];
+    return write;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space.}
+\trap{Comparing \texttt{a[read]} with \texttt{a[read-1]} looks equivalent and
+is not: once you start overwriting, \texttt{a[read-1]} may be a value you
+already moved. Compare against the last \emph{kept} element.}
+
+% ------------------------------------------------------------------
+\problem{Two-sum in a sorted array}{Easy}
+
+Given a sorted array and a target, return the indices of two values that add to
+the target, or \texttt{null}.
+
+\idea{One pointer at each end. If the sum is too big the right pointer must come
+in; if too small the left must go out. No other move can help.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int[] twoSumSorted(int[] a, int target) {
+    if (a == null) return null;
+    int i = 0, j = a.length - 1;
+    while (i < j) {
+        long sum = (long) a[i] + a[j];
+        if (sum == target) return new int[] {i, j};
+        if (sum < target) i++; else j--;
+    }
+    return null;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space. On an \emph{unsorted} array use a
+\texttt{HashMap} of value to index instead --- also $O(n)$.}
+\trap{\texttt{a[i] + a[j]} can overflow \texttt{int} with large values. Widen
+to \texttt{long} before adding.}
+
+% ------------------------------------------------------------------
+\problem{Maximum subarray sum}{Medium}
+
+Return the largest sum obtainable from a contiguous, non-empty subarray.
+
+\noindent\texttt{[-2,1,-3,4,-1,2,1,-5,4]} gives 6.
+
+\idea{Kadane. At each element, the best subarray ending here is either this
+element alone or this element extending the best ending just before it.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int maxSubarraySum(int[] a) {
+    if (a == null || a.length == 0) return 0;
+    long best = a[0], endingHere = a[0];
+    for (int i = 1; i < a.length; i++) {
+        endingHere = Math.max(a[i], endingHere + a[i]);
+        best = Math.max(best, endingHere);
+    }
+    return (int) best;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space.}
+\trap{Initialising \texttt{best} to \texttt{0} instead of \texttt{a[0]} returns
+0 for an all-negative array, when the answer is the least negative element.
+The problem says non-empty.}
+
+% ------------------------------------------------------------------
+\problem{Rotate an array by k}{Medium}
+
+Shift every element right by $k$ positions, wrapping around, in place.
+\texttt{[1,2,3,4,5]} with $k=2$ becomes \texttt{[4,5,1,2,3]}.
+
+\idea{Reverse the whole array, then reverse the first $k$ and the rest
+separately. Three reversals, no extra array.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static void rotate(int[] a, int k) {
+    if (a == null || a.length == 0) return;
+    k = ((k % a.length) + a.length) % a.length;   // handles negative k
+    reverse(a, 0, a.length - 1);
+    reverse(a, 0, k - 1);
+    reverse(a, k, a.length - 1);
+}
+
+private static void reverse(int[] a, int i, int j) {
+    while (i < j) {
+        int t = a[i]; a[i] = a[j]; a[j] = t;
+        i++; j--;
+    }
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space.}
+\trap{$k$ can exceed the length, and can be negative. The double-modulo
+normalises both. Without it, \texttt{k = 7} on a length-5 array throws.}
+
+% ------------------------------------------------------------------
+\problem{Merge two sorted arrays}{Easy}
+
+Both inputs are sorted ascending. Return one sorted array containing all the
+elements.
+
+\idea{One index into each, repeatedly take the smaller head. Then drain whichever
+array still has elements.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int[] merge(int[] a, int[] b) {
+    if (a == null) a = new int[0];
+    if (b == null) b = new int[0];
+    int[] out = new int[a.length + b.length];
+    int i = 0, j = 0, k = 0;
+    while (i < a.length && j < b.length)
+        out[k++] = (a[i] <= b[j]) ? a[i++] : b[j++];
+    while (i < a.length) out[k++] = a[i++];
+    while (j < b.length) out[k++] = b[j++];
+    return out;
+}
+\end{lstlisting}
+
+\cost{$O(n+m)$ time, $O(n+m)$ space.}
+\trap{Forgetting the two drain loops. The main loop stops as soon as
+\emph{either} array is exhausted, and the remainder of the other one still has
+to be copied.}
+
+% ------------------------------------------------------------------
+\problem{Product of the array except self}{Medium}
+
+Return an array where position $i$ holds the product of every element
+\emph{except} \texttt{a[i]}. Do it without division.
+\texttt{[1,2,3,4]} gives \texttt{[24,12,8,6]}.
+
+\idea{Two sweeps. Left to right, store the product of everything before $i$.
+Right to left, multiply in the product of everything after $i$, carried in a
+single variable.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int[] productExceptSelf(int[] a) {
+    if (a == null || a.length == 0) return new int[0];
+    int n = a.length;
+    int[] out = new int[n];
+    out[0] = 1;
+    for (int i = 1; i < n; i++) out[i] = out[i - 1] * a[i - 1];
+    int suffix = 1;
+    for (int i = n - 1; i >= 0; i--) {
+        out[i] *= suffix;
+        suffix *= a[i];
+    }
+    return out;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ extra space beyond the output.}
+\trap{The division shortcut --- total product divided by \texttt{a[i]} ---
+breaks on a single zero and is undefined on two. The problem forbids it for
+exactly that reason.}
+
+% ------------------------------------------------------------------
+\problem{Container with most water}{Medium}
+
+Each element is the height of a vertical line. Pick two lines so that the
+rectangle between them holds the most water: area is the shorter height times
+the distance.
+
+\idea{Start at the widest pair and close in. The area is limited by the shorter
+line, so moving the \emph{taller} one inwards can never help --- width shrinks
+and the limit does not rise. Move the shorter one.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int maxArea(int[] height) {
+    if (height == null || height.length < 2) return 0;
+    int i = 0, j = height.length - 1, best = 0;
+    while (i < j) {
+        int h = Math.min(height[i], height[j]);
+        best = Math.max(best, h * (j - i));
+        if (height[i] < height[j]) i++; else j--;
+    }
+    return best;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space.}
+\trap{Moving whichever pointer you feel like, or both, breaks the argument.
+The proof that nothing is missed depends on always discarding the shorter
+line.}

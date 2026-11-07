@@ -1,0 +1,202 @@
+\chapterpage{Matrices}{Six problems. Two-dimensional arrays are mostly an
+index-discipline test: get \texttt{rows} and \texttt{cols} the right way round
+and most of the difficulty disappears.}
+
+% ------------------------------------------------------------------
+\problem{Rotate a square matrix 90 degrees clockwise}{Medium}
+
+Rotate in place. \texttt{[[1,2],[3,4]]} becomes \texttt{[[3,1],[4,2]]}.
+
+\idea{Transpose (reflect across the main diagonal), then reverse each row. Two
+simple passes beat one confusing index formula.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static void rotate90(int[][] m) {
+    int n = m.length;
+    for (int i = 0; i < n; i++)
+        for (int j = i + 1; j < n; j++) {      // j starts at i+1
+            int t = m[i][j]; m[i][j] = m[j][i]; m[j][i] = t;
+        }
+    for (int[] row : m)
+        for (int i = 0, j = n - 1; i < j; i++, j--) {
+            int t = row[i]; row[i] = row[j]; row[j] = t;
+        }
+}
+\end{lstlisting}
+
+\cost{$O(n^2)$ time, $O(1)$ space.}
+\trap{Starting the inner transpose loop at \texttt{j = 0} swaps every pair
+twice and leaves the matrix unchanged. It must start at \texttt{i + 1}.}
+
+% ------------------------------------------------------------------
+\problem{Spiral traversal}{Medium}
+
+Return the elements in spiral order: left to right along the top, down the
+right side, right to left along the bottom, up the left side, then inwards.
+
+\idea{Four moving boundaries. After walking each edge, shrink that boundary, and
+check before the two ``return'' edges that the boundaries have not crossed.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static List<Integer> spiral(int[][] m) {
+    List<Integer> out = new ArrayList<>();
+    if (m == null || m.length == 0) return out;
+    int top = 0, bottom = m.length - 1;
+    int left = 0, right = m[0].length - 1;
+
+    while (top <= bottom && left <= right) {
+        for (int c = left; c <= right; c++) out.add(m[top][c]);
+        top++;
+        for (int r = top; r <= bottom; r++) out.add(m[r][right]);
+        right--;
+        if (top <= bottom) {
+            for (int c = right; c >= left; c--) out.add(m[bottom][c]);
+            bottom--;
+        }
+        if (left <= right) {
+            for (int r = bottom; r >= top; r--) out.add(m[r][left]);
+            left++;
+        }
+    }
+    return out;
+}
+\end{lstlisting}
+
+\cost{$O(\text{rows}\times\text{cols})$ time.}
+\trap{Omitting the two guards duplicates a row or a column on non-square
+matrices --- a single remaining row would be walked both left-to-right and
+right-to-left.}
+
+% ------------------------------------------------------------------
+\problem{Count islands}{Medium}
+
+The grid holds \texttt{'1'} for land and \texttt{'0'} for water. Count the
+connected groups of land, using four-way adjacency.
+
+\idea{Scan every cell. The first time you touch a piece of land, increment the
+count and flood the whole island so it is never counted again.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int countIslands(char[][] grid) {
+    if (grid == null || grid.length == 0) return 0;
+    int rows = grid.length, cols = grid[0].length, islands = 0;
+    int[][] dirs = {{-1,0},{1,0},{0,-1},{0,1}};
+
+    for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++) {
+            if (grid[r][c] != '1') continue;
+            islands++;
+            Deque<int[]> queue = new ArrayDeque<>();
+            queue.add(new int[] {r, c});
+            grid[r][c] = '0';                   // mark on push
+            while (!queue.isEmpty()) {
+                int[] cell = queue.poll();
+                for (int[] d : dirs) {
+                    int nr = cell[0] + d[0], nc = cell[1] + d[1];
+                    if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+                    if (grid[nr][nc] != '1') continue;
+                    grid[nr][nc] = '0';
+                    queue.add(new int[] {nr, nc});
+                }
+            }
+        }
+    return islands;
+}
+\end{lstlisting}
+
+\cost{$O(\text{rows}\times\text{cols})$ time and space.}
+\trap{Marking a cell visited when you \emph{pop} it rather than when you
+\emph{push} it lets the same cell enter the queue many times, and a large
+open grid then blows up. Mark on push, always.}
+
+% ------------------------------------------------------------------
+\problem{Set matrix zeroes}{Medium}
+
+If any cell is zero, set its whole row and column to zero. The catch is doing
+it without a second matrix.
+
+\idea{Two passes. First record \emph{which} rows and columns must be cleared;
+only then clear them. Clearing as you go turns the whole matrix to zero.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static void setZeroes(int[][] m) {
+    if (m == null || m.length == 0) return;
+    int rows = m.length, cols = m[0].length;
+    boolean[] clearRow = new boolean[rows];
+    boolean[] clearCol = new boolean[cols];
+
+    for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++)
+            if (m[r][c] == 0) { clearRow[r] = true; clearCol[c] = true; }
+
+    for (int r = 0; r < rows; r++)
+        for (int c = 0; c < cols; c++)
+            if (clearRow[r] || clearCol[c]) m[r][c] = 0;
+}
+\end{lstlisting}
+
+\cost{$O(\text{rows}\times\text{cols})$ time, $O(\text{rows}+\text{cols})$
+space.}
+\trap{The naive one-pass version writes zeros that the rest of the pass then
+reads as original zeros, cascading until everything is zero. The $O(1)$-space
+variant stores the flags in row 0 and column 0 and needs a separate flag for
+each of those --- more clever than it is worth under time pressure.}
+
+% ------------------------------------------------------------------
+\problem{Diagonal sums}{Easy}
+
+Sum the main diagonal and the anti-diagonal of a square matrix, counting the
+centre of an odd-sized matrix once.
+
+\idea{One loop. At step $i$ the two diagonal cells are $m[i][i]$ and
+$m[i][n-1-i]$; they coincide exactly when $i = n-1-i$.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static long diagonalSum(int[][] m) {
+    int n = m.length;
+    long total = 0;
+    for (int i = 0; i < n; i++) {
+        total += m[i][i];
+        if (i != n - 1 - i) total += m[i][n - 1 - i];
+    }
+    return total;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space.}
+\trap{Double-counting the centre cell of an odd matrix. And the total can
+exceed \texttt{int} --- use \texttt{long}.}
+
+% ------------------------------------------------------------------
+\problem{Search a row-and-column sorted matrix}{Medium}
+
+Every row is sorted left to right and every column top to bottom. Decide
+whether a target is present.
+
+\idea{Start at the top-right corner. That cell is the largest in its row and the
+smallest in its column, so a comparison always eliminates an entire row or an
+entire column.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static boolean contains(int[][] m, int target) {
+    if (m == null || m.length == 0) return false;
+    int r = 0, c = m[0].length - 1;
+    while (r < m.length && c >= 0) {
+        if (m[r][c] == target) return true;
+        if (m[r][c] > target) c--;     // whole column is too big
+        else r++;                      // whole row is too small
+    }
+    return false;
+}
+\end{lstlisting}
+
+\cost{$O(\text{rows}+\text{cols})$ time, $O(1)$ space.}
+\trap{Starting at the top-left corner gives no information: both moves lead to
+larger values, so you cannot eliminate anything. The corner choice is the
+entire trick.}

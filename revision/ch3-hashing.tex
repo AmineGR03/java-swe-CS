@@ -1,0 +1,245 @@
+\chapterpage{Hashing and counting}{Eight problems. If a question asks about
+\emph{how many}, \emph{have I seen}, or \emph{group by}, the answer starts with
+a \texttt{HashMap}. The prefix-sum trick in P18 and P21 is the single highest
+value pattern in this book.}
+
+% ------------------------------------------------------------------
+\problem{Count pairs summing to a target}{Easy}
+
+Count the pairs of indices $i<j$ with \texttt{a[i] + a[j] == target}.
+\texttt{[1,5,7,1]} with target 6 gives 2.
+
+\idea{Walk once. For each element, the number of earlier elements that complete
+the pair is already in the map. Count first, then insert --- that ordering is
+what stops an element pairing with itself.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static long countPairs(int[] a, int target) {
+    if (a == null) return 0;
+    Map<Integer,Integer> seen = new HashMap<>();
+    long pairs = 0;
+    for (int x : a) {
+        pairs += seen.getOrDefault(target - x, 0);
+        seen.merge(x, 1, Integer::sum);
+    }
+    return pairs;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(n)$ space.}
+\trap{Inserting before counting makes \texttt{[3]} with target 6 report one
+pair. And the count can exceed \texttt{int} on a large array of equal values:
+$n = 200\,000$ identical elements is about $2\times10^{10}$ pairs.}
+
+% ------------------------------------------------------------------
+\problem{Longest subarray with equal counts}{Medium}
+
+Return the length of the longest contiguous subarray holding as many even
+numbers as odd ones. \texttt{[1,2,3,4,5]} gives 4.
+
+\idea{Turn it into a running balance: $+1$ for odd, $-1$ for even. A subarray is
+balanced exactly when the balance at its two ends is equal. So record, for
+each balance value, the \emph{earliest} index where it appeared; the longest
+span to a repeat of that value is the answer.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int longestBalanced(int[] nums) {
+    if (nums == null || nums.length == 0) return 0;
+    Map<Integer,Integer> firstIndex = new HashMap<>();
+    firstIndex.put(0, -1);                 // empty prefix
+    int balance = 0, best = 0;
+    for (int i = 0; i < nums.length; i++) {
+        balance += (nums[i] % 2 != 0) ? 1 : -1;
+        Integer seen = firstIndex.get(balance);
+        if (seen == null) firstIndex.put(balance, i);
+        else best = Math.max(best, i - seen);
+    }
+    return best;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(n)$ space.}
+\trap{Three in one problem. Overwriting the stored index on a repeat measures
+the \emph{shortest} span. Omitting the \texttt{0 -> -1} seed loses every answer
+that starts at index 0. And \texttt{nums[i] \% 2 == 1} is false for $-3$.}
+\alsoknown{Task 4 of the assessment; and, with 0 and 1 in place of even and
+odd, the classic ``contiguous array'' question.}
+
+% ------------------------------------------------------------------
+\problem{Group anagrams}{Medium}
+
+Group the words that are anagrams of one another.
+
+\noindent\texttt{["eat","tea","tan","ate"]} gives
+\texttt{[[eat,tea,ate],[tan]]}.
+
+\idea{Give every word a canonical key that all its anagrams share. Sorting the
+letters is the obvious one; a 26-slot count rendered as a string is faster.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static List<List<String>> groupAnagrams(String[] words) {
+    Map<String,List<String>> groups = new HashMap<>();
+    for (String w : words) {
+        char[] letters = w.toCharArray();
+        Arrays.sort(letters);
+        String key = new String(letters);
+        groups.computeIfAbsent(key, k -> new ArrayList<>()).add(w);
+    }
+    return new ArrayList<>(groups.values());
+}
+\end{lstlisting}
+
+\cost{$O(n\,k\log k)$ for $n$ words of length $k$. The counting key makes it
+$O(nk)$.}
+\trap{Using the word's \texttt{hashCode} or its character \emph{sum} as the
+key. Both collide: \texttt{"ad"} and \texttt{"bc"} have the same letter sum.}
+
+% ------------------------------------------------------------------
+\problem{Top k frequent elements}{Medium}
+
+Return the $k$ most frequent values, most frequent first.
+
+\idea{Count, then select. A heap of size $k$ keeps the selection at
+$O(n\log k)$; sorting the distinct values is simpler and usually fast enough.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int[] topKFrequent(int[] a, int k) {
+    Map<Integer,Integer> freq = new HashMap<>();
+    for (int x : a) freq.merge(x, 1, Integer::sum);
+
+    PriorityQueue<Map.Entry<Integer,Integer>> heap =
+        new PriorityQueue<>(Map.Entry.comparingByValue());   // min-heap
+    for (Map.Entry<Integer,Integer> e : freq.entrySet()) {
+        heap.offer(e);
+        if (heap.size() > k) heap.poll();     // drop the least frequent
+    }
+    int[] out = new int[heap.size()];
+    for (int i = out.length - 1; i >= 0; i--) out[i] = heap.poll().getKey();
+    return out;
+}
+\end{lstlisting}
+
+\cost{$O(n\log k)$ time, $O(n)$ space.}
+\trap{Java's \texttt{PriorityQueue} is a \emph{min}-heap. To keep the top $k$
+you push everything and evict the smallest, which is why the output has to be
+filled backwards. Reaching for a max-heap and polling $k$ times also works but
+costs $O(n\log n)$.}
+
+% ------------------------------------------------------------------
+\problem{Subarray sum equals k}{Medium}
+
+Count the contiguous subarrays whose elements sum to exactly $k$. Values may be
+negative.
+
+\idea{Prefix sums. The sum of the window $(j, i]$ is
+$\text{prefix}_i - \text{prefix}_j$, so a window sums to $k$ whenever an
+earlier prefix equals $\text{prefix}_i - k$. Count how many times each prefix
+has occurred.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int subarraysSummingTo(int[] a, int k) {
+    Map<Long,Integer> counts = new HashMap<>();
+    counts.put(0L, 1);                     // the empty prefix
+    long prefix = 0;
+    int total = 0;
+    for (int x : a) {
+        prefix += x;
+        total += counts.getOrDefault(prefix - k, 0);
+        counts.merge(prefix, 1, Integer::sum);
+    }
+    return total;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(n)$ space.}
+\trap{A sliding window does \emph{not} work here, because negative values mean
+growing the window can lower the sum. Sliding windows need monotonicity;
+prefix sums do not.}
+
+% ------------------------------------------------------------------
+\problem{First duplicate}{Easy}
+
+Return the first value that appears twice, scanning left to right, or $-1$.
+
+\idea{A \texttt{HashSet}. \texttt{add} returns \texttt{false} when the element
+was already present, so the check and the insert are one call.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int firstDuplicate(int[] a) {
+    Set<Integer> seen = new HashSet<>();
+    for (int x : a) if (!seen.add(x)) return x;
+    return -1;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(n)$ space.}
+\trap{``First duplicate'' means the first value whose \emph{second} occurrence
+comes earliest, which is what this returns. If the question instead wants the
+duplicate whose first occurrence is earliest, that is a different answer and
+needs a second pass.}
+
+% ------------------------------------------------------------------
+\problem{Intersection of two arrays}{Easy}
+
+Return the values present in both arrays, each once.
+
+\idea{Put the smaller array in a set, then filter the larger one, moving each hit
+into a result set so duplicates collapse.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int[] intersection(int[] a, int[] b) {
+    Set<Integer> inA = new HashSet<>();
+    for (int x : a) inA.add(x);
+    Set<Integer> both = new LinkedHashSet<>();
+    for (int x : b) if (inA.contains(x)) both.add(x);
+    int[] out = new int[both.size()];
+    int i = 0;
+    for (int x : both) out[i++] = x;
+    return out;
+}
+\end{lstlisting}
+
+\cost{$O(n+m)$ time, $O(n)$ space.}
+\trap{Collecting into a \texttt{List} gives duplicates when \texttt{b} repeats
+a shared value. \texttt{LinkedHashSet} also fixes the output order, which
+plain \texttt{HashSet} leaves unspecified --- graders often compare arrays
+exactly.}
+
+% ------------------------------------------------------------------
+\problem{Isomorphic strings}{Medium}
+
+Two strings are isomorphic if the characters of one can be mapped to the
+characters of the other consistently and one-to-one. \texttt{"egg"} and
+\texttt{"add"} are; \texttt{"foo"} and \texttt{"bar"} are not.
+
+\idea{Two maps, one in each direction. A single map allows two different
+characters to map onto the same target, which breaks one-to-one.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static boolean isIsomorphic(String s, String t) {
+    if (s == null || t == null || s.length() != t.length()) return false;
+    Map<Character,Character> forward = new HashMap<>();
+    Map<Character,Character> backward = new HashMap<>();
+    for (int i = 0; i < s.length(); i++) {
+        char a = s.charAt(i), b = t.charAt(i);
+        Character f = forward.putIfAbsent(a, b);
+        Character g = backward.putIfAbsent(b, a);
+        if ((f != null && f != b) || (g != null && g != a)) return false;
+    }
+    return true;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space for a bounded alphabet.}
+\trap{Comparing the boxed \texttt{Character} values with \texttt{!=} works here
+only because the cache covers ASCII. Make it a habit to unbox or use
+\texttt{.equals} --- the same code with \texttt{Integer} keys above 127 would
+silently fail.}

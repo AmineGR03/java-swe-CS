@@ -1,0 +1,115 @@
+\chapterpage{The Java toolkit}{The twenty things you must not have to think
+about on the day. Read this once; come back to it whenever a drill makes you
+hesitate.}
+
+\subsection*{Choosing the container}
+\addcontentsline{toc}{subsection}{Choosing the container}
+
+\begin{tabular}{@{}p{4.3cm}p{4.1cm}p{6.6cm}@{}}
+\toprule
+\textbf{You need} & \textbf{Use} & \textbf{Why / cost} \\
+\midrule
+Count things by key & \texttt{HashMap<K,Integer>} & \texttt{merge(k,1,Integer::sum)}, O(1) \\
+Group things by key & \texttt{HashMap<K,List<V>>} & \texttt{computeIfAbsent(k, x -> new ArrayList<>())} \\
+Seen-before / dedupe & \texttt{HashSet<T>} & \texttt{add} returns \texttt{false} if present \\
+Keys in sorted order & \texttt{TreeMap<K,V>} & O(log n), gives \texttt{firstKey}, \texttt{floorKey} \\
+Insertion order kept & \texttt{LinkedHashMap} & iteration order = insertion order \\
+Growable array & \texttt{ArrayList<T>} & O(1) amortised add, O(1) get \\
+Stack or queue & \texttt{ArrayDeque<T>} & \texttt{push/pop}, \texttt{offer/poll}; never \texttt{Stack} \\
+Top-k / smallest-first & \texttt{PriorityQueue<T>} & O(log n) per op, min-heap by default \\
+\bottomrule
+\end{tabular}
+
+\medskip
+\noindent\texttt{ArrayDeque} is the right answer for both stacks and queues.
+\texttt{java.util.Stack} is a synchronised relic and \texttt{LinkedList} costs
+you a pointer chase per element.
+
+\subsection*{Idioms worth memorising}
+\addcontentsline{toc}{subsection}{Idioms worth memorising}
+
+\begin{lstlisting}[style=java,numbers=none]
+// count occurrences
+Map<Character,Integer> freq = new HashMap<>();
+for (char c : s.toCharArray()) freq.merge(c, 1, Integer::sum);
+
+// group into lists
+Map<String,List<String>> byKey = new HashMap<>();
+byKey.computeIfAbsent(key, k -> new ArrayList<>()).add(value);
+
+// accumulate a total and a count together
+map.computeIfAbsent(dept, k -> new long[2])[0] += salary;   // [0]=total
+map.get(dept)[1]++;                                          // [1]=count
+
+// sort with a tie-break: primary descending, secondary ascending
+list.sort((a, b) -> a.score != b.score
+        ? Integer.compare(b.score, a.score)
+        : a.name.compareTo(b.name));
+
+// iterate a map
+for (Map.Entry<String,Integer> e : map.entrySet())
+    use(e.getKey(), e.getValue());
+
+// array <-> list
+int[] arr = list.stream().mapToInt(Integer::intValue).toArray();
+String[] out = list.toArray(new String[0]);
+
+// 2D array, all cells set
+char[][] g = new char[rows][cols];
+for (char[] row : g) Arrays.fill(row, '.');
+
+// the four neighbours (eight: nest -1..1 and skip 0,0)
+int[][] DIRS = {{-1,0},{1,0},{0,-1},{0,1}};
+\end{lstlisting}
+
+\subsection*{Traps that cost real points}
+\addcontentsline{toc}{subsection}{Traps that cost real points}
+
+\begin{itemize}
+  \item \textbf{\texttt{split(",")} drops trailing empties.} \texttt{"a,b,"}
+        splits into 2 parts, not 3. Use \texttt{split(",", -1)} whenever the
+        field count is part of your validation.
+  \item \textbf{\texttt{\%} keeps the sign of the dividend.}
+        \texttt{-3 \% 2 == -1}, so \texttt{n \% 2 == 1} is false for negative
+        odd numbers. Write \texttt{n \% 2 != 0}.
+  \item \textbf{Integer division truncates toward zero.} \texttt{7/2 == 3} and
+        \texttt{-7/2 == -3}. That is not floor for negatives.
+  \item \textbf{\texttt{int} overflow is silent.} Sums of up to
+        $2\times10^9$ values overflow. Accumulate in \texttt{long}.
+  \item \textbf{\texttt{==} on boxed types compares references.} Use
+        \texttt{.equals}, or unbox to \texttt{int} first. \texttt{Integer}
+        caches only $-128$ to $127$, which is why small cases seem to work.
+  \item \textbf{\texttt{String +=} in a loop is O(n$^2$).} Use
+        \texttt{StringBuilder}.
+  \item \textbf{\texttt{Concurrent\-Modification\-Exception}} when you add to or
+        remove from a collection while a for-each is running. Collect the keys
+        first, then mutate; or use \texttt{Iterator.remove()}.
+  \item \textbf{A recursive flood fill overflows the stack} at a few tens of
+        thousands of cells. Use an explicit \texttt{ArrayDeque}.
+  \item \textbf{\texttt{Arrays.sort} on primitives is a dual-pivot quicksort}
+        with an O(n$^2$) worst case on crafted input; on objects it is a stable
+        merge sort. Boxing to \texttt{Integer[]} is the paranoid fix, and
+        almost never needed.
+  \item \textbf{Returning \texttt{null} where an empty array was asked for.}
+        Read the return contract twice.
+\end{itemize}
+
+\subsection*{Complexity you should recognise instantly}
+\addcontentsline{toc}{subsection}{Complexity you should recognise instantly}
+
+\begin{tabular}{@{}llp{6.4cm}@{}}
+\toprule
+\textbf{Shape} & \textbf{Cost} & \textbf{Safe up to} \\
+\midrule
+Single pass & $O(n)$ & $10^8$ \\
+Sort & $O(n\log n)$ & $10^7$ \\
+Nested loop over the input & $O(n^2)$ & $\sim\!10^4$ \\
+Pass per element, each a scan & $O(n^2)$ & the same, and this is the one you write by accident \\
+Flood fill / BFS on a grid & $O(\text{rows}\times\text{cols})$ & $10^7$ cells \\
+\bottomrule
+\end{tabular}
+
+\medskip
+\noindent If the constraints say $n \le 200\,000$, an $O(n^2)$ solution will
+time out. That number in a statement is the examiner telling you the intended
+complexity.

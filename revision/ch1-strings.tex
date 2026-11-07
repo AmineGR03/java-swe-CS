@@ -1,0 +1,240 @@
+\chapterpage{Strings}{Eight problems. Strings are the most common opener in a
+screen because they are quick to state and full of edge cases.}
+
+% ------------------------------------------------------------------
+\problem{Reverse the words in a sentence}{Easy}
+
+Given a sentence, return it with the words in reverse order and exactly one
+space between them. Leading, trailing and repeated spaces are removed.
+\texttt{"\ the sky\ \ is blue "} becomes \texttt{"blue is sky the"}.
+
+\idea{Split on runs of whitespace, walk the parts backwards, join with a single space.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static String reverseWords(String s) {
+    if (s == null) return "";
+    String[] parts = s.trim().split("\\s+");
+    StringBuilder out = new StringBuilder();
+    for (int i = parts.length - 1; i >= 0; i--) {
+        if (parts[i].isEmpty()) continue;
+        if (out.length() > 0) out.append(' ');
+        out.append(parts[i]);
+    }
+    return out.toString();
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(n)$ space.}
+\trap{Splitting on \texttt{" "} instead of \texttt{"\textbackslash\textbackslash s+"} leaves empty strings in the
+array when spaces repeat. And \texttt{trim()} first, or a leading space gives
+you an empty first element anyway.}
+
+% ------------------------------------------------------------------
+\problem{Valid palindrome, ignoring punctuation}{Easy}
+
+Return \texttt{true} if the string reads the same forwards and backwards when
+you consider only letters and digits, and ignore case.
+\texttt{"A man, a plan, a canal: Panama"} is a palindrome.
+
+\idea{Two pointers walking inwards, each skipping anything that is not alphanumeric.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static boolean isPalindrome(String s) {
+    if (s == null) return true;
+    int i = 0, j = s.length() - 1;
+    while (i < j) {
+        while (i < j && !Character.isLetterOrDigit(s.charAt(i))) i++;
+        while (i < j && !Character.isLetterOrDigit(s.charAt(j))) j--;
+        if (Character.toLowerCase(s.charAt(i)) !=
+            Character.toLowerCase(s.charAt(j))) return false;
+        i++; j--;
+    }
+    return true;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space.}
+\trap{The inner skip loops need their own \texttt{i < j} guard, or a string of
+pure punctuation runs the pointer off the end.}
+
+% ------------------------------------------------------------------
+\problem{First non-repeating character}{Easy}
+
+Return the index of the first character that appears exactly once, or
+$-1$. In \texttt{"loveleetcode"} the answer is 2.
+
+\idea{Count every character in one pass, then scan the string again in order and
+return the first with count 1. Two passes beat one clever pass.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int firstUnique(String s) {
+    if (s == null || s.isEmpty()) return -1;
+    int[] freq = new int[128];                 // ASCII
+    for (int i = 0; i < s.length(); i++) freq[s.charAt(i)]++;
+    for (int i = 0; i < s.length(); i++)
+        if (freq[s.charAt(i)] == 1) return i;
+    return -1;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space (the table is a fixed 128).}
+\trap{Scanning the \emph{map} rather than the string for the second pass loses
+the ordering. \texttt{HashMap} has no order; if you must use one, use
+\texttt{LinkedHashMap}, or just re-scan the string as above.}
+
+% ------------------------------------------------------------------
+\problem{Run-length encoding}{Easy}
+
+Replace each maximal run of identical characters with the character followed by
+the run length, writing a run of one as just the character.
+\texttt{"aaabccddd"} becomes \texttt{"a3bc2d3"}.
+
+\idea{One pointer at the start of the run, a second scanning forward while the
+character is unchanged.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static String compress(String s) {
+    if (s == null || s.isEmpty()) return "";
+    StringBuilder out = new StringBuilder();
+    int i = 0;
+    while (i < s.length()) {
+        char ch = s.charAt(i);
+        int j = i;
+        while (j < s.length() && s.charAt(j) == ch) j++;
+        out.append(ch);
+        if (j - i > 1) out.append(j - i);
+        i = j;
+    }
+    return out.toString();
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(n)$ space.}
+\trap{Run lengths can have more than one digit --- \texttt{"z12"} is a valid
+output. Any solution that appends a single \texttt{char} for the count is
+wrong past nine.}
+\alsoknown{Task 1 of the assessment.}
+
+% ------------------------------------------------------------------
+\problem{Anagram check}{Easy}
+
+Return \texttt{true} if two strings contain the same letters with the same
+multiplicities.
+
+\idea{Count up for the first string, count down for the second, and check nothing
+is left over. Length differing is an instant \texttt{false}.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static boolean isAnagram(String a, String b) {
+    if (a == null || b == null || a.length() != b.length()) return false;
+    int[] freq = new int[26];
+    for (int i = 0; i < a.length(); i++) {
+        freq[a.charAt(i) - 'a']++;
+        freq[b.charAt(i) - 'a']--;
+    }
+    for (int f : freq) if (f != 0) return false;
+    return true;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(1)$ space.}
+\trap{The \texttt{- 'a'} indexing assumes lowercase letters only. If the input
+can be any character, use a \texttt{HashMap} or a 128-entry table --- an
+uppercase letter would write to a negative index and throw.}
+
+% ------------------------------------------------------------------
+\problem{Longest common prefix}{Easy}
+
+Given an array of strings, return the longest prefix common to all of them, or
+\texttt{""}.
+
+\idea{Compare column by column: take character $i$ of the first string and check
+it against character $i$ of every other. Stop at the first mismatch or the
+first string that ends.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static String longestCommonPrefix(String[] words) {
+    if (words == null || words.length == 0) return "";
+    for (int i = 0; i < words[0].length(); i++) {
+        char c = words[0].charAt(i);
+        for (int w = 1; w < words.length; w++) {
+            if (words[w] == null) return "";
+            if (i >= words[w].length() || words[w].charAt(i) != c)
+                return words[0].substring(0, i);
+        }
+    }
+    return words[0];
+}
+\end{lstlisting}
+
+\cost{$O(\text{total characters})$ time, $O(1)$ extra space.}
+\trap{Forgetting the \texttt{i >= words[w].length()} check throws
+\texttt{StringIndexOutOfBounds} as soon as one word is a strict prefix of
+another (\texttt{["ab", "a"]}).}
+
+% ------------------------------------------------------------------
+\problem{Compare two version strings}{Medium}
+
+Versions are dot-separated numbers: \texttt{"1.2.10"}. Return $-1$, $0$ or $1$
+for less than, equal, greater than. Missing components count as zero, so
+\texttt{"1.0"} equals \texttt{"1"}.
+
+\idea{Split both, then walk to the longer length, treating a missing component as
+zero. Compare numerically, never as text.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int compareVersions(String a, String b) {
+    String[] x = a.split("\\.");
+    String[] y = b.split("\\.");
+    int n = Math.max(x.length, y.length);
+    for (int i = 0; i < n; i++) {
+        long left  = i < x.length ? Long.parseLong(x[i]) : 0;
+        long right = i < y.length ? Long.parseLong(y[i]) : 0;
+        if (left != right) return left < right ? -1 : 1;
+    }
+    return 0;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time.}
+\trap{Two of them. \texttt{split(".")} splits on \emph{every character},
+because \texttt{.} is a regex wildcard --- you must escape it. And comparing
+the components as strings makes \texttt{"1.10"} less than \texttt{"1.9"}.}
+
+% ------------------------------------------------------------------
+\problem{Longest substring without repeating characters}{Medium}
+
+Return the length of the longest substring in which no character repeats.
+In \texttt{"abcabcbb"} the answer is 3.
+
+\idea{A sliding window. Remember the last index at which each character was seen;
+when you meet a repeat that is inside the window, jump the left edge past it.}
+
+\solheading
+\begin{lstlisting}[style=java]
+public static int longestUnique(String s) {
+    if (s == null || s.isEmpty()) return 0;
+    Map<Character,Integer> lastSeen = new HashMap<>();
+    int best = 0, left = 0;
+    for (int right = 0; right < s.length(); right++) {
+        char c = s.charAt(right);
+        Integer prev = lastSeen.get(c);
+        if (prev != null && prev >= left) left = prev + 1;
+        lastSeen.put(c, right);
+        best = Math.max(best, right - left + 1);
+    }
+    return best;
+}
+\end{lstlisting}
+
+\cost{$O(n)$ time, $O(\min(n,\Sigma))$ space.}
+\trap{The \texttt{prev >= left} test is the whole problem. Without it a
+character seen long ago, already outside the window, drags the left edge
+\emph{backwards} and the window stops being valid.}

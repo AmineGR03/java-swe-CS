@@ -1,0 +1,11 @@
+# Normalise text in the repository, and pin the endings that matter.
+* text=auto
+
+# Shell scripts must keep LF, or bash fails with "\r: command not found".
+*.sh   text eol=lf
+
+# PowerShell is happiest with CRLF on Windows.
+*.ps1  text eol=crlf
+
+# Never touch these.
+*.pdf  binary
