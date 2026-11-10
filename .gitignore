@@ -12,6 +12,12 @@ revision/*.out
 revision/*.toc
 revision/*.synctex.gz
 revision/main.pdf
+js-questions/*.aux
+js-questions/*.log
+js-questions/*.out
+js-questions/*.toc
+js-questions/*.synctex.gz
+js-questions/main.pdf
 
 # Editor and tooling
 .claude/

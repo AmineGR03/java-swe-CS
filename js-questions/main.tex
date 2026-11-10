@@ -1,0 +1,1123 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{textcomp}
+\usepackage{upquote}
+\usepackage[margin=2.2cm,top=2.4cm,bottom=2.4cm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,decorations.pathreplacing}
+\usepackage[hidelinks,bookmarks,bookmarksnumbered]{hyperref}
+
+% ----------------------------------------------------------------- colours
+\definecolor{ink}{HTML}{15171C}
+\definecolor{accent}{HTML}{1D4ED8}
+\definecolor{muted}{HTML}{5C6370}
+\definecolor{rule}{HTML}{D3D7DE}
+\definecolor{codebg}{HTML}{F6F7F9}
+\definecolor{kw}{HTML}{0B5FA5}
+\definecolor{cm}{HTML}{6A7380}
+\definecolor{st}{HTML}{9B2C2C}
+\definecolor{bad}{HTML}{B42318}
+\definecolor{ok}{HTML}{1A7F37}
+\definecolor{easybg}{HTML}{E7F6EC}
+\definecolor{medbg}{HTML}{FDF3DC}
+\definecolor{hardbg}{HTML}{FBE9E7}
+
+\hypersetup{pdftitle={JavaScript Coding Questions - Worked Solutions},
+            pdfsubject={Four timed-screen problems with solutions, diagrams and advice}}
+
+% ----------------------------------------------------------------- listings
+\lstdefinelanguage{JS}{
+  morekeywords={const,let,var,function,return,for,of,in,if,else,while,do,new,
+                break,continue,class,this,typeof,delete,try,catch,throw,
+                null,undefined,true,false,Infinity,NaN},
+  morekeywords=[2]{Math,Number,String,Array,Object,Set,Map,JSON,console,parseInt,
+                   isNaN,Boolean},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]',
+  morestring=[b]",
+}
+\lstdefinestyle{js}{
+  language=JS,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{kw}\bfseries,
+  keywordstyle=[2]\color{accent},
+  commentstyle=\color{cm}\itshape,
+  stringstyle=\color{st},
+  numbers=left,
+  numberstyle=\tiny\color{muted},
+  numbersep=9pt,
+  backgroundcolor=\color{codebg},
+  frame=leftline,
+  framesep=7pt,
+  framerule=1.1pt,
+  rulecolor=\color{accent},
+  xleftmargin=18pt,
+  breaklines=true,
+  breakatwhitespace=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  tabsize=2,
+  aboveskip=8pt,
+  belowskip=8pt,
+}
+\lstdefinestyle{plain}{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=leftline,
+  framesep=7pt,
+  framerule=1.1pt,
+  rulecolor=\color{rule},
+  xleftmargin=10pt,
+  breaklines=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  aboveskip=7pt,
+  belowskip=7pt,
+}
+\lstset{style=js}
+
+% ----------------------------------------------------------------- headings
+\titleformat{\section}{\Large\bfseries\color{accent}}{\thesection.}{0.6em}{}
+\titlespacing*{\section}{0pt}{0pt}{12pt}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.6em}{}
+\titlespacing*{\subsection}{0pt}{12pt}{6pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{muted}JavaScript Coding Questions --- Worked Solutions}
+\fancyhead[R]{\small\color{muted}\thepage}
+
+% ----------------------------------------------------------------- problems
+\newcommand{\dchip}[2]{\colorbox{#1}{\small\textsf{\,#2\,}}}
+\newcommand{\difficulty}[1]{%
+  \ifnum\pdfstrcmp{#1}{Easy}=0 \dchip{easybg}{Easy}\fi
+  \ifnum\pdfstrcmp{#1}{Medium}=0 \dchip{medbg}{Medium}\fi
+  \ifnum\pdfstrcmp{#1}{Hard}=0 \dchip{hardbg}{Hard}\fi
+}
+\newcommand{\qhead}[3]{%
+  \clearpage
+  \section{#1}
+  \noindent{\color{muted}\textsf{#3}}\hfill\difficulty{#2}\par
+  \smallskip\noindent\rule{\linewidth}{0.4pt}\par\smallskip
+}
+\newcommand{\blk}[1]{\par\smallskip\noindent\textbf{\color{accent}#1}\par\nopagebreak}
+\newcommand{\lab}[1]{\par\noindent\textbf{#1}\ \ignorespaces}
+\newcommand{\trap}[1]{\par\smallskip\noindent\textbf{\color{bad}Trap.}\ #1\par}
+\newcommand{\fcap}[1]{\par\vspace{-4pt}\begin{center}%
+  {\footnotesize\color{muted}#1}\end{center}\vspace{2pt}}
+
+% ----------------------------------------------------------------- diagrams
+\definecolor{dline}{HTML}{BFC6D1}
+\definecolor{dplain}{HTML}{FFFFFF}
+\definecolor{dsoft}{HTML}{EDF2FA}
+\definecolor{dhot}{HTML}{FAE0D4}
+\definecolor{dwarm}{HTML}{FBEED5}
+\definecolor{dcool}{HTML}{DFF2EA}
+\definecolor{ddead}{HTML}{EFEFEA}
+
+\tikzset{
+  cell/.style      ={draw=dline, line width=.5pt, fill=dplain, minimum size=7.4mm,
+                     inner sep=0pt, font=\ttfamily\small, text=ink},
+  soft/.style      ={cell, fill=dsoft},
+  hot/.style       ={cell, fill=dhot},
+  warm/.style      ={cell, fill=dwarm},
+  cool/.style      ={cell, fill=dcool},
+  dead/.style      ={cell, fill=ddead, text=muted},
+  disc/.style      ={draw=dline, line width=.5pt, fill=dsoft, circle,
+                     minimum size=7.4mm, inner sep=0pt, font=\ttfamily\small, text=ink},
+  idx/.style       ={font=\scriptsize, text=muted, inner sep=1.5pt},
+  ptr/.style       ={font=\footnotesize\bfseries, text=accent, inner sep=1.5pt},
+  note/.style      ={font=\footnotesize, text=muted, inner sep=2pt},
+  flow/.style      ={-{Stealth[length=4.5pt,width=3.5pt]}, draw=accent, line width=.7pt},
+  back/.style      ={-{Stealth[length=4.5pt,width=3.5pt]}, draw=muted, line width=.6pt,
+                     densely dashed},
+  edge/.style      ={draw=dline, line width=.6pt},
+  cut/.style       ={draw=accent, line width=1.3pt, densely dashed},
+  bar/.style       ={draw=accent!60, line width=.5pt, fill=dsoft},
+  hotbar/.style    ={draw=bad!70, line width=.6pt, fill=dhot},
+  span/.style      ={decorate, decoration={brace, amplitude=4pt, raise=2pt},
+                     draw=accent, line width=.6pt},
+}
+
+\newenvironment{dia}
+  {\par\addvspace{9pt}\begin{center}\begin{tikzpicture}}
+  {\end{tikzpicture}\end{center}\addvspace{1pt}}
+
+\emergencystretch=2.5em
+\hbadness=2000
+
+\setlist[itemize]{leftmargin=1.2em,itemsep=2pt,topsep=4pt}
+\setlist[enumerate]{leftmargin=1.5em,itemsep=2pt,topsep=4pt}
+
+\begin{document}
+
+% ================================================================= title
+\begin{titlepage}
+\centering
+\vspace*{3.2cm}
+{\Huge\bfseries JavaScript\par}
+\vspace{0.4cm}
+{\Huge\bfseries Coding Questions\par}
+\vspace{1.1cm}
+{\large\color{muted} Four timed-screen problems, worked end to end\par}
+\vspace{0.3cm}
+{\large\color{muted} Statement \textperiodcentered{} diagram \textperiodcentered{} solution
+\textperiodcentered{} complexity \textperiodcentered{} the trap\par}
+\vspace{2.4cm}
+\rule{8cm}{1pt}\par
+\vspace{2.4cm}
+{\color{muted}
+Every solution in this pack was executed and cross-checked against a\\[2pt]
+brute-force reference before it was printed.\par}
+\vfill
+{\small\color{muted} Compiled from \texttt{coding\_questions\_with\_context.txt}\par}
+\end{titlepage}
+\setcounter{page}{2}
+
+% ================================================================= contents
+\tableofcontents
+
+% ================================================================= intro
+\clearpage
+\section{How to use this pack}
+
+Four problems, all in JavaScript, all of the shape a 60--70 minute online screen
+actually asks: digit arithmetic, string tokenising, a small 2-D search, and an
+interval sweep. None of them needs dynamic programming or graph theory. What
+they need is that you translate a wordy statement into correct code quickly, and
+that you do not lose the submission to an off-by-one or a silent type coercion.
+
+Each chapter is laid out the same way, and the order is the order you should
+work in:
+
+\begin{enumerate}
+  \item \textbf{Statement} --- the problem as given, unedited in substance.
+  \item \textbf{Reading it} --- what the sentences actually constrain, including
+        the words that are easy to skim past.
+  \item \textbf{Picture} --- a diagram of the mechanism. If you cannot draw the
+        problem you do not understand it yet.
+  \item \textbf{Approach} --- the one-sentence idea, then the refinement.
+  \item \textbf{Solution} --- complete, runnable code.
+  \item \textbf{Walkthrough} --- the given example traced by hand.
+  \item \textbf{Cost} --- time and space.
+  \item \textbf{Traps and advice} --- the things that break submissions.
+\end{enumerate}
+
+\paragraph{A method that survives the clock.}
+\begin{enumerate}
+  \item Read the whole statement before typing. Underline every edge case it
+        names --- ties, bounds, inclusivity, ``at least one''. They are in the
+        statement because they are in the hidden tests.
+  \item State the approach in one sentence. If you cannot, you do not have one.
+  \item Write the happy path. Then add the edge cases you underlined.
+  \item Re-read the statement against your code. The most expensive bug in a
+        timed test is the one you never go looking for.
+  \item Run the provided example by hand \emph{before} you run it on the
+        machine. You will catch the misread, which is the common failure, not
+        the typo, which the runner catches for you.
+\end{enumerate}
+
+\paragraph{Time budget.} At four problems in seventy minutes you have about
+seventeen minutes each, and you want to bank time on the easy ones. A sensible
+split for this set: Q1 in six minutes, Q2 in ten, Q4 in fifteen, Q3 in
+twenty-five. Do them in that order, not the order printed.
+
+\paragraph{The five words that carry the tests.} In this set specifically:
+\emph{inclusive} (Q1, Q4), \emph{consecutive} (Q2), \emph{non-negative} --- which
+includes zero (Q3), \emph{at least one} (Q3), and \emph{smallest} (Q4). Each one
+is a test case someone wrote on purpose.
+
+\bigskip
+\noindent\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{\#} & \textbf{Problem} & \textbf{Pattern} & \textbf{Target time} \\
+\midrule
+Q1 & Three-digit numbers, distinct digits & digit extraction, counting  & 6 min \\
+Q2 & Replace numbers with repeated digits  & tokenise, map, join        & 10 min \\
+Q3 & Partition a matrix into four blocks   & 2-D prefix sums, brute cuts & 25 min \\
+Q4 & Point lit by the most lamps           & sweep line / difference array & 15 min \\
+\bottomrule
+\end{tabular}
+
+% ================================================================= Q1
+\qhead{Count three-digit numbers with distinct digits}{Easy}%
+{Digit extraction \textperiodcentered{} counting \textperiodcentered{} \texttt{solution(left, right)}}
+
+\blk{Statement}
+Given a range of numbers \texttt{left} and \texttt{right}, inclusive, where
+$100 < \texttt{left} < \texttt{right} < 999$, count the three-digit numbers in
+the range whose three digits are pairwise distinct --- that is, no two digits in
+the number may be the same. All numbers in the range are guaranteed to have
+exactly three digits.
+
+\blk{Reading it}
+\begin{itemize}
+  \item \textbf{Inclusive.} Both endpoints count. The loop is
+        \texttt{n <= right}, not \texttt{n < right}.
+  \item \textbf{Pairwise distinct} means all three comparisons must hold:
+        $a \neq b$, $b \neq c$, \emph{and} $a \neq c$. Checking only adjacent
+        pairs lets \texttt{121} through, and \texttt{121} is in the tests.
+  \item \textbf{Exactly three digits} is a gift: no padding, no leading-zero
+        case, and the hundreds digit is never zero.
+  \item The bound is tiny --- at most 899 numbers --- so a direct loop is not
+        just acceptable, it is the right answer. Reaching for combinatorics here
+        costs minutes and buys nothing.
+\end{itemize}
+
+\blk{Picture}
+Every number splits into three digit slots. A number survives only if all three
+slots differ:
+
+\begin{dia}
+  % 123 -- good
+  \node[cool] (a1) at (0,0)   {1};
+  \node[cool] (a2) at (0.8,0) {2};
+  \node[cool] (a3) at (1.6,0) {3};
+  \draw[flow] (a1) to[bend left=38] (a2);
+  \draw[flow] (a2) to[bend left=38] (a3);
+  \draw[flow] (a1) to[bend right=32] (a3);
+  \node[note, text=ok] at (0.8,-0.95) {all three differ \ensuremath{\Rightarrow} count};
+
+  % 121 -- bad, non-adjacent clash
+  \node[hot] (b1) at (4.2,0) {1};
+  \node[cell] (b2) at (5.0,0) {2};
+  \node[hot] (b3) at (5.8,0) {1};
+  \draw[flow] (b1) to[bend left=38] (b2);
+  \draw[flow] (b2) to[bend left=38] (b3);
+  \draw[draw=bad, line width=.9pt, -{Stealth[length=4.5pt,width=3.5pt]}]
+        (b1) to[bend right=32] (b3);
+  \node[note, text=bad] at (5.0,-0.95) {hundreds = units \ensuremath{\Rightarrow} skip};
+
+  % 455 -- bad, adjacent clash
+  \node[cell] (c1) at (8.4,0) {4};
+  \node[hot]  (c2) at (9.2,0) {5};
+  \node[hot]  (c3) at (10.0,0) {5};
+  \draw[flow] (c1) to[bend left=38] (c2);
+  \draw[draw=bad, line width=.9pt, -{Stealth[length=4.5pt,width=3.5pt]}]
+        (c2) to[bend left=38] (c3);
+  \draw[flow] (c1) to[bend right=32] (c3);
+  \node[note, text=bad] at (9.2,-0.95) {tens = units \ensuremath{\Rightarrow} skip};
+
+  \node[idx] at (0,0.62)   {$a$};
+  \node[idx] at (0.8,0.62) {$b$};
+  \node[idx] at (1.6,0.62) {$c$};
+\end{dia}
+\fcap{Three comparisons, not two. The middle case is the one a two-comparison
+check gets wrong.}
+
+\blk{Approach}
+Walk every integer from \texttt{left} to \texttt{right}. Peel the three digits
+off with integer division and remainder, and count the number if all three
+differ.
+
+\begin{lstlisting}
+function solution(left, right) {
+  let count = 0;
+
+  for (let n = left; n <= right; n++) {   // inclusive on both ends
+    const a = Math.floor(n / 100);        // hundreds
+    const b = Math.floor(n / 10) % 10;    // tens
+    const c = n % 10;                     // units
+
+    if (a !== b && b !== c && a !== c) {  // all three pairs
+      count++;
+    }
+  }
+
+  return count;
+}
+\end{lstlisting}
+
+\blk{A shorter variant}
+If you prefer strings, a \texttt{Set} makes the distinctness test one
+expression. It is slower by a constant factor and allocates, which does not
+matter at this size:
+
+\begin{lstlisting}
+function solution(left, right) {
+  let count = 0;
+  for (let n = left; n <= right; n++) {
+    if (new Set(String(n)).size === 3) count++;
+  }
+  return count;
+}
+\end{lstlisting}
+
+\noindent Write whichever you can type without hesitating. On an easy problem
+the only currency is minutes.
+
+\blk{Walkthrough}
+For \texttt{solution(123, 456)} the answer is \textbf{244}. For the widest legal
+range the constraints allow, \texttt{solution(101, 998)}, it is \textbf{648}.
+
+That second number is a free correctness check, and worth knowing: over a
+complete hundred-block the count is always the same. The hundreds digit is
+fixed, the tens digit has 9 remaining choices, the units digit has 8, so
+$9 \times 8 = 72$ per block:
+
+\begin{dia}
+  \foreach \h [count=\i from 0] in {1,2,3,4,5,6,7,8,9} {
+    \draw[bar] (\i*1.05, 0) rectangle ++(0.7, 1.44);
+    \node[idx] at (\i*1.05+0.35, -0.22) {\h00};
+    \node[note] at (\i*1.05+0.35, 1.66) {72};
+  }
+  \draw[edge] (-0.2,0) -- (9.6,0);
+  \node[note, text=accent, anchor=west] at (-0.2, 2.15)
+    {$9 \times 8 = 72$ distinct-digit numbers in every hundred-block};
+  \node[note, anchor=west] at (-0.2, -0.75)
+    {so $100$--$999$ holds $9 \times 72 = 648$ of them};
+\end{dia}
+\fcap{The count per block is flat. If your answer for a full block is not 72,
+your distinctness test is wrong.}
+
+\blk{Cost}
+$O(R - L)$ time with $R - L < 899$, and $O(1)$ space. The string variant is the
+same asymptotically with a larger constant.
+
+\blk{Traps and advice}
+\trap{Checking only \texttt{a !== b \&\& b !== c}. That accepts \texttt{121},
+\texttt{212}, \texttt{919} --- every palindrome. It is the single most common
+way to fail this problem, and it fails quietly: the count is merely a bit too
+high.}
+
+\begin{itemize}
+  \item \textbf{Off-by-one on the range.} The word is \emph{inclusive}. Use
+        \texttt{<=}.
+  \item \textbf{Do not over-engineer.} There is a closed form --- count whole
+        blocks, handle the two partial ends --- but it takes three times as long
+        to write and is far easier to get wrong. Save the cleverness for Q3.
+  \item \textbf{\texttt{Math.floor} vs \texttt{\textasciitilde\textasciitilde{}}
+        or \texttt{| 0}.} The bit-twiddling truncations work here because every
+        value is positive and small, but they truncate toward zero, not down.
+        Build the habit of \texttt{Math.floor} now so that it is automatic when
+        negatives show up (they do, in Q3 and Q4).
+  \item \textbf{If asked to generalise} to $k$-digit numbers, switch to the
+        string-and-\texttt{Set} form: it needs no change at all, while the
+        division form needs a loop.
+\end{itemize}
+
+% ================================================================= Q2
+\qhead{Replace numbers containing consecutive duplicate digits}{Easy}%
+{Tokenise \textperiodcentered{} map \textperiodcentered{} join \textperiodcentered{} \texttt{solution(sensorReadings)}}
+
+\blk{Statement}
+You are given a string of space-separated numbers named \texttt{sensorReadings}.
+Identify every number that contains at least two consecutive duplicate digits.
+Replace each such number with the sum of its digits. Numbers that do not contain
+consecutive duplicate digits must remain unchanged. Return the modified string,
+with the numbers separated by spaces and kept in their original order.
+
+\medskip
+\noindent\begin{tabular}{@{}ll@{}}
+\textbf{Input}  & \texttt{"123 4558 787"} \\
+\textbf{Output} & \texttt{"123 22 787"} \\
+\end{tabular}
+\medskip
+
+\blk{Reading it}
+\begin{itemize}
+  \item \textbf{Consecutive} is the whole problem. \texttt{787} has two
+        \texttt{7}s and is left alone, because they are not adjacent. Only a run
+        of two equal digits \emph{side by side} triggers the replacement.
+  \item \textbf{At least two} --- a run of three or more also triggers it, once.
+        You are detecting whether a run exists, not counting runs.
+  \item \textbf{Sum of its digits}, not of the number, and not recursively down
+        to a single digit. \texttt{4558} becomes $4+5+5+8 = 22$, and stops at
+        22.
+  \item \textbf{Original order}, separated by single spaces. This is a
+        \texttt{map} over tokens, never a sort or a filter --- the output has
+        exactly as many tokens as the input.
+\end{itemize}
+
+\blk{Picture}
+Slide a two-wide window along each token. One match anywhere is enough to
+rewrite the token:
+
+\begin{dia}
+  % token 123
+  \node[note, anchor=east, text=ink] at (-0.35, 0) {\texttt{"123"}};
+  \node[cell] (p0) at (0,0)   {1};
+  \node[cell] (p1) at (0.8,0) {2};
+  \node[cell] (p2) at (1.6,0) {3};
+  \draw[edge] (0.4,-0.52) -- (0.4,-0.72);
+  \draw[edge] (1.2,-0.52) -- (1.2,-0.72);
+  \node[note] at (0.4,-0.92) {$1{\neq}2$};
+  \node[note] at (1.2,-0.92) {$2{\neq}3$};
+  \node[note, anchor=west, text=ok] at (2.15, 0) {no run \ensuremath{\Rightarrow} keep \texttt{"123"}};
+
+  % token 4558
+  \node[note, anchor=east, text=ink] at (-0.35, -1.62) {\texttt{"4558"}};
+  \node[cell] (q0) at (0,-1.62)   {4};
+  \node[hot]  (q1) at (0.8,-1.62) {5};
+  \node[hot]  (q2) at (1.6,-1.62) {5};
+  \node[cell] (q3) at (2.4,-1.62) {8};
+  \draw[edge] (0.4,-2.14) -- (0.4,-2.30);
+  \draw[draw=bad, line width=1pt] (1.2,-2.14) -- (1.2,-2.30);
+  \draw[edge] (2.0,-2.14) -- (2.0,-2.30);
+  \node[note] at (0.4,-2.50) {$4{\neq}5$};
+  \node[note, text=bad] at (1.2,-2.50) {$5{=}5$};
+  \node[note] at (2.0,-2.50) {$5{\neq}8$};
+  \node[note, anchor=west, text=bad] at (2.95,-1.62)
+    {run found \ensuremath{\Rightarrow} $4{+}5{+}5{+}8 = \mathbf{22}$};
+
+  % token 787
+  \node[note, anchor=east, text=ink] at (-0.35, -3.24) {\texttt{"787"}};
+  \node[warm] (r0) at (0,-3.24)   {7};
+  \node[cell] (r1) at (0.8,-3.24) {8};
+  \node[warm] (r2) at (1.6,-3.24) {7};
+  \draw[edge] (0.4,-3.76) -- (0.4,-3.92);
+  \draw[edge] (1.2,-3.76) -- (1.2,-3.92);
+  \node[note] at (0.4,-4.12) {$7{\neq}8$};
+  \node[note] at (1.2,-4.12) {$8{\neq}7$};
+  \node[note, anchor=west, text=ok] at (2.15,-3.24)
+    {equal but \emph{not} adjacent \ensuremath{\Rightarrow} keep \texttt{"787"}};
+\end{dia}
+\fcap{Only neighbouring pairs are compared --- which is exactly why \texttt{787}
+survives untouched.}
+
+\blk{Approach}
+Split on spaces, map each token, join with spaces. Inside the map, scan the
+token once comparing each character with the one before it; if any pair matches,
+return the digit sum as a string, otherwise return the token untouched. Work on the token as a \emph{string} throughout;
+converting to a number first throws away leading zeros and risks precision loss.
+
+\begin{lstlisting}
+function solution(sensorReadings) {
+  return sensorReadings
+    .split(' ')
+    .map(token => {
+      // does the token contain a run of two equal digits?
+      let hasRun = false;
+      for (let i = 1; i < token.length; i++) {
+        if (token[i] === token[i - 1]) { hasRun = true; break; }
+      }
+
+      if (!hasRun) return token;          // unchanged, exactly as given
+
+      let sum = 0;
+      for (const ch of token) sum += Number(ch);
+      return String(sum);
+    })
+    .join(' ');
+}
+\end{lstlisting}
+
+\blk{A compact variant}
+A back-reference does the detection in one regular expression. Worth knowing,
+but only write it if you are sure of the syntax under pressure:
+
+\begin{lstlisting}
+const digitSum = s => [...s].reduce((a, ch) => a + Number(ch), 0);
+
+function solution(sensorReadings) {
+  return sensorReadings
+    .split(' ')
+    .map(t => (/(\d)\1/.test(t) ? String(digitSum(t)) : t))
+    .join(' ');
+}
+\end{lstlisting}
+
+\noindent \texttt{/(\textbackslash d)\textbackslash 1/} reads as ``a digit,
+then that same digit again''. The \texttt{\textbackslash 1} is the
+back-reference, and it is exactly the definition of a consecutive duplicate.
+
+\blk{Walkthrough}
+\begin{lstlisting}[style=plain]
+"123 4558 787"
+  -> ["123", "4558", "787"]
+     "123"   pairs (1,2)(2,3)      no run  -> "123"
+     "4558"  pairs (4,5)(5,5)(5,8) run!   -> 4+5+5+8 = 22 -> "22"
+     "787"   pairs (7,8)(8,7)      no run  -> "787"
+  -> "123 22 787"
+\end{lstlisting}
+
+\blk{Cost}
+$O(N)$ time and $O(N)$ space in the total length of the input string. Each
+character is examined at most twice --- once by the run scan, once by the sum.
+
+\blk{Traps and advice}
+\trap{Testing for duplicate digits \emph{anywhere} in the token, for instance
+with \texttt{new Set(token).size !== token.length}. That rewrites \texttt{787}
+to \texttt{22} and fails the provided example. \emph{Consecutive} means
+adjacent.}
+
+\begin{itemize}
+  \item \textbf{Do not parse the token to a number.} \texttt{"007"} has a run of
+        two zeros and must become \texttt{"7"}; \texttt{Number("007")} is
+        \texttt{7}, which has no run at all, so the detection silently inverts.
+        Past 15 digits you also lose precision. Strings have neither problem.
+  \item \textbf{Single space, as specified.} \texttt{split(' ')} is correct for
+        single-space input and is what the statement describes. If the input
+        might carry double spaces or padding, \texttt{trim().split(/\textbackslash s+/)}
+        is the robust form --- but note it changes the output when the test
+        expects an empty token preserved. Match the statement first, harden
+        second.
+  \item \textbf{\texttt{+ch} coerces, \texttt{Number(ch)} is explicit.} Both
+        work. What does \emph{not} work is \texttt{sum += ch}: it concatenates
+        and yields \texttt{"0455"} instead of \texttt{22}. If your output looks
+        like the digits glued together, this is why.
+  \item \textbf{A run of three or more} is still one trigger.
+        \texttt{"9999999999"} becomes \texttt{"90"}, not \texttt{"9"} --- you sum
+        the digits once, you do not reduce repeatedly.
+\end{itemize}
+
+% ================================================================= Q3
+\qhead{Partition a matrix into four rectangles}{Hard}%
+{2-D prefix sums \textperiodcentered{} brute-force cuts \textperiodcentered{} \texttt{solution(matrix)}}
+
+\blk{Statement}
+You are given a two-dimensional integer array named \texttt{matrix}. Partition
+it into four rectangular submatrices using one horizontal cut and one vertical
+cut. Each of the four resulting submatrices must contain at least one
+non-negative-valued cell.
+
+For a partition, calculate the average of each submatrix using only its
+non-negative values:
+\[
+  \text{average} \;=\;
+  \left\lfloor \frac{\text{sum of non-negative values}}
+                    {\text{count of non-negative values}} \right\rfloor
+\]
+Negative values are ignored. Each of the four partitions must have at least one
+non-negative value, so its average is defined. The objective is to minimise
+\[
+  \max(\text{four averages}) - \min(\text{four averages}).
+\]
+Return the row \texttt{resRow} and column \texttt{resCol} defining the cuts. The
+four partitions are
+\begin{center}\small\ttfamily
+matrix[0..resRow][0..resCol] \quad matrix[0..resRow][resCol+1..cols-1] \\
+matrix[resRow+1..rows-1][0..resCol] \quad matrix[resRow+1..rows-1][resCol+1..cols-1]
+\end{center}
+
+\blk{Reading it}
+\begin{itemize}
+  \item \textbf{One horizontal and one vertical cut}, both full-width. The four
+        blocks are a $2 \times 2$ tiling --- not an arbitrary partition. So the
+        entire search space is the pair
+        $(\texttt{resRow}, \texttt{resCol})$ with
+        $0 \le \texttt{resRow} \le \text{rows}-2$ and
+        $0 \le \texttt{resCol} \le \text{cols}-2$. For a $3 \times 4$ matrix
+        that is $2 \times 3 = 6$ candidates. Six. You can afford to check them
+        all.
+  \item \textbf{Non-negative includes zero.} The filter is \texttt{v >= 0}, not
+        \texttt{v > 0}. A block of nothing but zeros is perfectly valid and has
+        average 0.
+  \item \textbf{At least one non-negative cell per block.} A candidate cut where
+        any block is entirely negative is \emph{not a legal partition} and must
+        be skipped, not scored as zero or infinity.
+  \item \textbf{Floor each average}, then take the spread of the four floored
+        values. Flooring after subtracting gives different answers --- and the
+        statement is explicit about where the floor goes.
+  \item \textbf{Return the cut indices}, not the spread. \texttt{resRow} is the
+        last row of the top half, \texttt{resCol} the last column of the left
+        half.
+\end{itemize}
+
+\blk{Picture}
+The cuts and the four blocks, on the matrix supplied with the problem:
+
+\begin{dia}
+  \def\cw{0.95}
+  % matrix values
+  \foreach \r/\row in {0/{7,9,-1,-1}, 1/{3,8,-1,-1}, 2/{5,5,7,-1}} {
+    \foreach \v [count=\c from 0] in \row {
+      \pgfmathtruncatemacro{\isneg}{\v<0 ? 1 : 0}
+      \ifnum\isneg=1
+        \node[dead] at (\c*\cw, -\r*\cw) {\v};
+      \else
+        \node[soft] at (\c*\cw, -\r*\cw) {\v};
+      \fi
+    }
+  }
+  % indices
+  \foreach \c in {0,1,2,3} {\node[idx] at (\c*\cw, 0.62) {c\c};}
+  \foreach \r in {0,1,2} {\node[idx] at (-0.68, -\r*\cw) {r\r};}
+
+  % the winning cuts: resRow = 1, resCol = 0
+  \draw[cut] (-0.5*\cw, -1.5*\cw) -- (3.5*\cw, -1.5*\cw);
+  \draw[cut] (0.5*\cw, 0.5*\cw) -- (0.5*\cw, -2.5*\cw);
+  \node[note, text=accent, anchor=west] at (3.6*\cw, -1.5*\cw) {\texttt{resRow = 1}};
+  \node[note, text=accent, anchor=south] at (0.5*\cw, 0.78*\cw) {\texttt{resCol = 0}};
+
+  % block labels with their averages
+  \node[note, anchor=west] at (6.3, 0.3)    {\textbf{TL} $\{7,3\}$: $10/2 \to \mathbf{5}$};
+  \node[note, anchor=west] at (6.3, -0.25)  {\textbf{TR} $\{9,8\}$: $17/2 \to \mathbf{8}$};
+  \node[note, anchor=west] at (6.3, -0.8)   {\textbf{BL} $\{5\}$: \ \ $5/1 \to \mathbf{5}$};
+  \node[note, anchor=west] at (6.3, -1.35)  {\textbf{BR} $\{5,7\}$: $12/2 \to \mathbf{6}$};
+  \node[note, anchor=west, text=accent] at (6.3, -2.0)
+    {spread $= 8 - 5 = \mathbf{3}$ \ (minimal)};
+  \node[note, anchor=west] at (6.3, -2.5) {grey cells are negative --- ignored};
+\end{dia}
+\fcap{The optimal cut for the supplied matrix. The answer is
+\texttt{[1, 0]}.}
+
+\blk{The whole search space}
+With only six candidates it is worth writing them all out --- and notice how
+many are thrown away because a block has no non-negative cell at all. The
+right-hand columns of this matrix are almost entirely $-1$, so most vertical
+cuts are illegal:
+
+\medskip
+\noindent\begin{tabular}{@{}cc|cccc|c@{}}
+\toprule
+\textbf{resRow} & \textbf{resCol} & \textbf{TL} & \textbf{TR} & \textbf{BL} & \textbf{BR} & \textbf{spread} \\
+\midrule
+0 & 0 & $7/1{=}7$  & $9/1{=}9$ & $8/2{=}4$  & $20/3{=}6$ & 5 \\
+0 & 1 & $16/2{=}8$ & \color{bad}none & $21/4{=}5$ & $7/1{=}7$ & \color{bad}illegal \\
+0 & 2 & $16/2{=}8$ & \color{bad}none & $28/5{=}5$ & \color{bad}none & \color{bad}illegal \\
+\textbf{1} & \textbf{0} & $10/2{=}5$ & $17/2{=}8$ & $5/1{=}5$ & $12/2{=}6$ & \color{ok}\textbf{3} \\
+1 & 1 & $27/4{=}6$ & \color{bad}none & $10/2{=}5$ & $7/1{=}7$ & \color{bad}illegal \\
+1 & 2 & $27/4{=}6$ & \color{bad}none & $17/3{=}5$ & \color{bad}none & \color{bad}illegal \\
+\bottomrule
+\end{tabular}
+
+\medskip
+\noindent Two legal candidates, spreads 5 and 3. The minimum is 3, at
+$(\texttt{resRow}, \texttt{resCol}) = (1, 0)$, which is the expected return
+value \texttt{[1, 0]}.
+
+\blk{Approach}
+Brute-force every cut pair. The only question is how fast you can score one
+candidate.
+
+The naive scoring re-walks all four blocks, which is $O(RC)$ per candidate and
+$O(R^2C^2)$ overall. That is fine for a small matrix and is a perfectly
+defensible submission. The clean answer is a \textbf{2-D prefix sum} --- two of
+them, in fact: one over the non-negative \emph{values} and one over the
+non-negative \emph{counts}. Then any rectangle's sum and count come out in four
+array reads, scoring is $O(1)$, and the whole search is $O(RC)$.
+
+\begin{dia}
+  \def\cw{0.78}
+  \foreach \r in {0,1,2,3} {
+    \foreach \c in {0,1,2,3,4} {
+      \pgfmathtruncatemacro{\inbox}{(\r<2 && \c<3) ? 1 : 0}
+      \ifnum\inbox=1
+        \node[soft, minimum size=6.2mm] at (\c*\cw, -\r*\cw) {};
+      \else
+        \node[cell, minimum size=6.2mm] at (\c*\cw, -\r*\cw) {};
+      \fi
+    }
+  }
+  \draw[draw=accent, line width=1.2pt]
+     (-0.5*\cw, 0.5*\cw) rectangle (2.5*\cw, -1.5*\cw);
+  \node[note, text=accent, anchor=west] at (2.7*\cw, -0.5*\cw)
+    {\texttt{p[r][c]} = aggregate of everything above and left};
+
+  % the four-term identity
+  \node[note, anchor=west] at (0.0, -3.5*\cw)
+    {rect$(r_1,c_1,r_2,c_2) = p[r_2{+}1][c_2{+}1] - p[r_1][c_2{+}1] - p[r_2{+}1][c_1] + p[r_1][c_1]$};
+  \node[note, anchor=west] at (0.0, -4.25*\cw)
+    {the last term is added back because the two subtractions both removed it};
+\end{dia}
+\fcap{Inclusion--exclusion on a prefix table: any rectangle in four reads. Build
+one table for sums and one for counts.}
+
+\blk{Solution}
+\begin{lstlisting}
+function solution(matrix) {
+  const rows = matrix.length;
+  const cols = matrix[0].length;
+
+  // Two prefix tables, padded by one row and column of zeros so that
+  // the four-term identity never needs a bounds check.
+  //   pSum[r][c] = sum   of non-negative values in matrix[0..r-1][0..c-1]
+  //   pCnt[r][c] = count of non-negative values in the same block
+  const pSum = Array.from({ length: rows + 1 }, () => new Array(cols + 1).fill(0));
+  const pCnt = Array.from({ length: rows + 1 }, () => new Array(cols + 1).fill(0));
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const v = matrix[r][c];
+      const s = v >= 0 ? v : 0;   // note: >= 0, zero counts
+      const k = v >= 0 ? 1 : 0;
+      pSum[r + 1][c + 1] = s + pSum[r][c + 1] + pSum[r + 1][c] - pSum[r][c];
+      pCnt[r + 1][c + 1] = k + pCnt[r][c + 1] + pCnt[r + 1][c] - pCnt[r][c];
+    }
+  }
+
+  // Inclusive rectangle [r1..r2] x [c1..c2] -> [sum, count]
+  const agg = (r1, c1, r2, c2) => [
+    pSum[r2 + 1][c2 + 1] - pSum[r1][c2 + 1] - pSum[r2 + 1][c1] + pSum[r1][c1],
+    pCnt[r2 + 1][c2 + 1] - pCnt[r1][c2 + 1] - pCnt[r2 + 1][c1] + pCnt[r1][c1],
+  ];
+
+  let best = Infinity;
+  let resRow = -1;
+  let resCol = -1;
+
+  for (let row = 0; row < rows - 1; row++) {     // last row of the top half
+    for (let col = 0; col < cols - 1; col++) {   // last col of the left half
+      const quads = [
+        agg(0, 0, row, col),                           // top-left
+        agg(0, col + 1, row, cols - 1),                // top-right
+        agg(row + 1, 0, rows - 1, col),                // bottom-left
+        agg(row + 1, col + 1, rows - 1, cols - 1),     // bottom-right
+      ];
+
+      // every block needs at least one non-negative cell, or the cut is illegal
+      if (quads.some(([, count]) => count === 0)) continue;
+
+      let hi = -Infinity;
+      let lo = Infinity;
+      for (const [sum, count] of quads) {
+        const avg = Math.floor(sum / count);   // floor each average
+        if (avg > hi) hi = avg;
+        if (avg < lo) lo = avg;
+      }
+
+      if (hi - lo < best) {   // strict: keeps the first, smallest cut on a tie
+        best = hi - lo;
+        resRow = row;
+        resCol = col;
+      }
+    }
+  }
+
+  return [resRow, resCol];
+}
+\end{lstlisting}
+
+\blk{Cost}
+Building both prefix tables is $O(RC)$ time and $O(RC)$ space. Each of the
+$(R-1)(C-1)$ candidates is scored in $O(1)$, so the search is $O(RC)$ too ---
+linear in the size of the input, which is optimal, since you must read every
+cell at least once.
+
+The naive $O(R^2C^2)$ version is about forty times more work on a
+$10 \times 10$ matrix and is still instant. Write the naive one first if the
+clock is against you; it is the correct answer, just not the fast one.
+
+\blk{Traps and advice}
+\trap{Using \texttt{v > 0} instead of \texttt{v >= 0}. Zero is non-negative. A
+matrix with zeros in it will produce the wrong averages and, worse, can make a
+legal block look illegal --- which changes the returned indices, not just the
+score.}
+
+\begin{itemize}
+  \item \textbf{A block with no non-negative cell makes the cut illegal.}
+        \texttt{continue} past it. If you instead treat the average as 0 you
+        will happily return a partition the statement forbids --- and on the
+        supplied matrix that is exactly what happens: four of the six candidates
+        are illegal.
+  \item \textbf{Loop bounds.} \texttt{row} runs to \texttt{rows - 2} and
+        \texttt{col} to \texttt{cols - 2}, because the bottom and right halves
+        must be non-empty. Writing \texttt{row < rows} produces empty blocks,
+        count 0, and --- if you did not guard --- a division by zero that yields
+        \texttt{NaN}. \texttt{NaN} comparisons are all false, so the bug hides
+        instead of crashing.
+  \item \textbf{Floor each average, not the difference.} With true averages
+        $8.5$ and $5.0$ the spread is $3.5$; with floored averages $8$ and $5$
+        it is $3$. These differ, and the statement asks for the second.
+  \item \textbf{Tie-break.} The statement does not say what to do when two cuts
+        share the minimal spread. Use a \emph{strict} \texttt{<} while scanning
+        \texttt{row} then \texttt{col} in increasing order: you keep the
+        smallest \texttt{resRow}, then the smallest \texttt{resCol}. That is the
+        convention these problems expect, and it is what the reference
+        implementation does.
+  \item \textbf{Ragged input.} \texttt{matrix[0].length} assumes every row has
+        the same width. That is safe for this statement; if you are handed a
+        ragged array it is a different problem.
+  \item \textbf{Sanity-check the orientation} before you submit. \texttt{resRow}
+        is the \emph{last row of the top half} --- the cut goes
+        \emph{after} it. Returning \texttt{[2, 0]} instead of \texttt{[1, 0]}
+        on the example means you returned the first row of the bottom half.
+  \item \textbf{Integer overflow is not a concern in JavaScript} up to $2^{53}$,
+        so plain numbers are fine for the prefix sums.
+\end{itemize}
+
+% ================================================================= Q4
+\qhead{Find the point illuminated by the most lamps}{Medium}%
+{Sweep line \textperiodcentered{} difference array \textperiodcentered{} \texttt{solution(lamps)}}
+
+\blk{Statement}
+You are given a two-dimensional array named \texttt{lamps}, where each
+\texttt{lamps[i]} describes the $i$-th lamp:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\texttt{lamps[i][0]} & integer coordinate of the lamp \\
+\texttt{lamps[i][1]} & positive integer effective radius of the lamp \\
+\end{tabular}
+\end{center}
+
+\noindent The $i$-th lamp illuminates every coordinate in the inclusive range
+\texttt{lamps[i][0] - lamps[i][1]} through \texttt{lamps[i][0] + lamps[i][1]}.
+Find the coordinate illuminated by the highest number of lamps. If several
+coordinates tie, return the smallest of them.
+
+\blk{Reading it}
+\begin{itemize}
+  \item \textbf{Each lamp is an interval}, $[p - r,\; p + r]$, inclusive at both
+        ends. The problem is ``where do the most intervals overlap'', which is
+        the classic sweep-line question wearing a costume.
+  \item \textbf{Coordinates are integers} and may be negative. Radii are
+        positive, so no interval is empty.
+  \item \textbf{Smallest coordinate on a tie.} This is the line that decides
+        whether your sweep is right.
+  \item \textbf{No bound is given on the coordinates.} So do not allocate an
+        array indexed by coordinate. Work with events instead --- the answer
+        depends on $n$, not on how far apart the lamps are.
+  \item \textbf{The answer is always at some interval's left endpoint.} The
+        overlap count only ever increases when an interval opens, so the maximum
+        is attained at one of the $n$ values $p_i - r_i$. That observation is
+        what makes the sweep legal.
+\end{itemize}
+
+\blk{Picture}
+Four lamps, their intervals, and the coverage count underneath. Two coordinates
+tie at the maximum, so the answer is the smaller one:
+
+\begin{dia}
+  \def\u{0.95}
+  % axis
+  \draw[edge] (1.6*\u, 0) -- (10.6*\u, 0);
+  \foreach \x in {2,3,4,5,6,7,8,9,10} {
+    \draw[edge] (\x*\u, 0.08) -- (\x*\u, -0.08);
+    \node[idx] at (\x*\u, 0.32) {\x};
+  }
+  \node[note, anchor=west] at (10.8*\u, 0) {coordinate};
+
+  % lamp bars: name / centre / radius / y
+  \foreach \nm/\p/\r/\y in {A/3/1/-0.62, B/5/2/-1.18, C/9/1/-1.74, D/6/3/-2.30} {
+    \pgfmathtruncatemacro{\lo}{\p-\r}
+    \pgfmathtruncatemacro{\hi}{\p+\r}
+    \draw[bar] (\lo*\u-0.3*\u, \y-0.17) rectangle (\hi*\u+0.3*\u, \y+0.17);
+    \fill[accent] (\p*\u, \y) circle (1.5pt);
+    \node[note, anchor=east] at (1.5*\u, \y) {\nm: $[\p,\r]$};
+    \node[note, text=accent, anchor=west] at (\hi*\u+0.45*\u, \y)
+      {covers $\lo..\hi$};
+  }
+
+  % coverage bars, growing upward from a baseline
+  \def\base{-4.05}
+  \foreach \x/\k in {2/1, 3/3, 4/3, 5/2, 6/2, 7/2, 8/2, 9/2, 10/1} {
+    \pgfmathsetmacro{\h}{\k*0.3}
+    \pgfmathsetmacro{\lbl}{\base+\h+0.2}
+    \pgfmathtruncatemacro{\ispeak}{\k==3 ? 1 : 0}
+    \ifnum\ispeak=1
+      \draw[hotbar] (\x*\u-0.3*\u, \base) rectangle ++(0.6*\u, \h);
+      \node[idx, text=bad] at (\x*\u, \lbl) {\k};
+    \else
+      \draw[bar] (\x*\u-0.3*\u, \base) rectangle ++(0.6*\u, \h);
+      \node[idx] at (\x*\u, \lbl) {\k};
+    \fi
+  }
+  \draw[edge] (1.6*\u, \base) -- (10.6*\u, \base);
+  \node[note, anchor=east] at (1.5*\u, \base+0.45) {lamps covering};
+  \node[note, anchor=east] at (1.5*\u, \base+0.12) {this coordinate};
+
+  % answer marker
+  \draw[draw=bad, line width=1pt, -{Stealth[length=5pt,width=4pt]}]
+    (3*\u, \base-0.75) -- (3*\u, \base-0.12);
+  \node[note, text=bad, anchor=west] at (3.35*\u, \base-0.75)
+    {3 and 4 both reach 3 lamps --- return the smaller, \textbf{3}};
+\end{dia}
+\fcap{Coverage is a step function. It only steps \emph{up} at a left endpoint,
+which is why the answer is always one of them.}
+
+\blk{Approach}
+Turn each lamp into two events: $+1$ at $p - r$, and $-1$ at $p + r + 1$. The
+closing event sits one past the last lit coordinate, because the range is
+inclusive --- that \texttt{+ 1} is the whole off-by-one of this problem.
+
+Sort the events by coordinate. Sweep left to right, and at each distinct
+coordinate apply \emph{every} event there before you read the running total.
+The total is then the number of lamps covering that coordinate. Track the
+maximum with a strict \texttt{>} so that the first --- smallest --- coordinate
+wins any tie.
+
+\begin{lstlisting}
+function solution(lamps) {
+  // +1 where a lamp starts, -1 one past where it ends
+  const events = [];
+  for (const [pos, radius] of lamps) {
+    events.push([pos - radius, +1]);
+    events.push([pos + radius + 1, -1]);   // inclusive end -> close at end+1
+  }
+
+  events.sort((a, b) => a[0] - b[0]);      // numeric compare, not the default
+
+  let active = 0;
+  let bestCount = 0;
+  let bestCoord = 0;
+
+  for (let i = 0; i < events.length; ) {
+    const x = events[i][0];
+
+    // apply all events at this coordinate before reading the total
+    while (i < events.length && events[i][0] === x) {
+      active += events[i][1];
+      i++;
+    }
+
+    if (active > bestCount) {   // strict: first (smallest) x wins a tie
+      bestCount = active;
+      bestCoord = x;
+    }
+  }
+
+  return bestCoord;
+}
+\end{lstlisting}
+
+\blk{Walkthrough}
+On the four lamps from the diagram, \texttt{[[3,1],[5,2],[9,1],[6,3]]}:
+
+\begin{lstlisting}[style=plain]
+events (sorted)    2:+1   3:+1  3:+1   5:-1   8:-1   10:-1   11:-1
+coordinate            2       3          5      8       10      11
+active after        1       3          2      1        0       -1
+best                1       3 <- max, at x = 3
+answer: 3
+\end{lstlisting}
+
+\noindent Coordinate 4 also has three lamps, but the sweep recorded 3 first and
+\texttt{>} refused to replace it. That is the tie rule, implemented for free.
+
+\blk{Cost}
+$O(n \log n)$ time, dominated by the sort, and $O(n)$ space for the $2n$ events.
+Independent of the coordinate range --- which is the point.
+
+\blk{A simpler alternative, and when it is wrong}
+If the statement bounds the coordinates (say $0 \le p \le 10^6$) you can use a
+difference array instead: a single pass of \texttt{diff[lo]++} and
+\texttt{diff[hi+1]--}, then one prefix scan. It is $O(n + M)$ with $M$ the
+coordinate range, simpler to write, and faster when $M$ is small.
+
+It breaks the moment coordinates can be large or negative --- an array cannot be
+indexed by $-5$, and you should not allocate $10^9$ slots. Since this statement
+gives no bound, the sweep is the safe choice. If you do take the difference
+array, offset by the minimum coordinate and say out loud that you are assuming a
+bounded range.
+
+\blk{Traps and advice}
+\trap{Closing the interval at \texttt{pos + radius} instead of
+\texttt{pos + radius + 1}. The range is inclusive, so the lamp is still on at
+\texttt{pos + radius}; subtracting there under-counts the last lit coordinate by
+one. It is the bug this problem is built to catch.}
+
+\begin{itemize}
+  \item \textbf{\texttt{sort()} without a comparator sorts lexicographically.}
+        \texttt{[10, 9, -5]} becomes \texttt{[-5, 10, 9]}. Always pass
+        \texttt{(a, b) => a[0] - b[0]}. This is the most common JavaScript bug
+        in the whole pack and it is invisible until a coordinate reaches two
+        digits.
+  \item \textbf{Apply all events at a coordinate before reading the total.} If
+        you read the running count after each individual event, a close that
+        happens to be processed before an open at the same coordinate gives a
+        dip that never existed. The inner \texttt{while} loop groups them.
+  \item \textbf{Strict \texttt{>} for the maximum.} Using \texttt{>=} keeps the
+        \emph{last} tied coordinate and returns 4 instead of 3 on the example.
+        One character, one failed submission.
+  \item \textbf{Initialise \texttt{bestCount} to 0, not \texttt{-Infinity}.}
+        Every lamp has a positive radius, so some coordinate is covered by at
+        least one lamp and the maximum is always $\ge 1$. Either initial value
+        works, but 0 makes the invariant obvious to a reader.
+  \item \textbf{Negative coordinates are normal.} Nothing in the sweep cares.
+        This is another reason to prefer it over bucketing.
+  \item \textbf{If asked for the count as well as the coordinate}, you already
+        have it in \texttt{bestCount} --- return \texttt{[bestCoord,
+        bestCount]}. Interviewers often ask this as the follow-up.
+\end{itemize}
+
+% ================================================================= summary
+\clearpage
+\section{What to take away}
+
+\subsection*{The four patterns}
+
+\noindent\begin{tabular}{@{}p{1.1cm}>{\raggedright\arraybackslash}p{4.3cm}>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}p{4.3cm}@{}}
+\toprule
+\textbf{\#} & \textbf{Pattern} & \textbf{Cost} & \textbf{The one trap} \\
+\midrule
+Q1 & Digit extraction by \texttt{/} and \texttt{\%}; brute-force count over a
+     tiny range
+   & $O(R-L)$ time, $O(1)$ space
+   & Only two of the three pairwise comparisons --- \texttt{121} slips through \\
+\addlinespace
+Q2 & Tokenise, \texttt{map}, \texttt{join}; one-pass adjacent-pair scan
+   & $O(N)$ time, $O(N)$ space
+   & Looking for duplicates anywhere instead of \emph{consecutive} --- \texttt{787} \\
+\addlinespace
+Q3 & Two 2-D prefix tables (sum and count) over a brute-force cut search
+   & $O(RC)$ time and space
+   & \texttt{v > 0} instead of \texttt{v >= 0}; scoring an illegal partition \\
+\addlinespace
+Q4 & Sweep line over $\pm 1$ events; coordinate compression by sorting
+   & $O(n \log n)$ time, $O(n)$ space
+   & Closing at \texttt{end} instead of \texttt{end + 1}; \texttt{>=} loses the tie \\
+\bottomrule
+\end{tabular}
+
+\subsection*{Three habits worth more than any algorithm}
+
+\begin{enumerate}
+  \item \textbf{Trace the supplied example by hand before you run it.} Every one
+        of these four problems ships an example chosen to expose a specific
+        misreading: \texttt{787} in Q2, the all-negative columns in Q3, the tie
+        in Q4. If your hand-trace matches and the runner disagrees, the bug is
+        in your code. If your hand-trace disagrees with the expected output, the
+        bug is in your understanding --- and that is the expensive one.
+  \item \textbf{Write the brute force first when the input is small.} Q1's range
+        is under 900 values; Q3's search space on the given matrix is six
+        candidates. A correct $O(R^2C^2)$ submission scores the same as a
+        correct $O(RC)$ one. Optimise after it passes, not before.
+  \item \textbf{Name the edge cases out loud as you read.} Inclusive bounds,
+        ties, ``at least one'', ``non-negative''. Four words in these statements
+        each cost a test case. Underlining them while reading takes fifteen
+        seconds and is the highest-return habit in a timed screen.
+\end{enumerate}
+
+\subsection*{JavaScript specifics that cost submissions}
+
+\begin{itemize}
+  \item \texttt{[].sort()} compares \emph{strings}. Numeric sorts need
+        \texttt{(a, b) => a - b}. Nothing warns you.
+  \item \texttt{Math.floor(-2.5)} is \texttt{-3}; \texttt{\textasciitilde\textasciitilde(-2.5)}
+        and \texttt{(-2.5) | 0} are \texttt{-2}. They agree only on
+        non-negatives. The floor in Q3's formula means \texttt{Math.floor}.
+  \item \texttt{sum += ch} on a string character concatenates. Coerce with
+        \texttt{Number(ch)} or \texttt{+ch}.
+  \item \texttt{"10" - 0} is \texttt{10} but \texttt{"10" + 0} is
+        \texttt{"100"}. Mixed-type arithmetic is a silent trap, which is why Q2
+        is best solved entirely in string space.
+  \item \texttt{str.split(' ')} on \texttt{"a\ \ b"} yields an empty middle
+        token, \texttt{["a", "", "b"]}. When the spacing is not guaranteed,
+        split on \texttt{/\textbackslash s+/} after a \texttt{trim()}.
+  \item \texttt{Array(n).fill(0)} is safe, but
+        \texttt{Array(n).fill([])} shares one array across every slot. For a
+        grid, build each row separately:
+        \texttt{Array.from(\{length: n\}, () => new Array(m).fill(0))}.
+  \item Comparing \texttt{NaN} always yields \texttt{false}, so a division by
+        zero does not throw --- it propagates silently and your minimum-tracking
+        loop quietly never updates. Guard the denominator, as Q3 does.
+  \item \texttt{for (const [a, b] of pairs)} destructures cleanly and reads
+        better than index arithmetic. Use it for the lamp list.
+\end{itemize}
+
+\bigskip
+\noindent{\small\color{muted}Every solution printed here was executed and
+cross-checked against an independent brute-force implementation --- including
+400 randomised matrices for Q3 and 500 randomised lamp sets for Q4 --- before
+this document was typeset.\par}
+
+\end{document}
