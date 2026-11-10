@@ -10,6 +10,30 @@ every bracket is closed by the matching kind, in the right order.
 \idea{Push openers. On a closer, the top of the stack must be its partner. At
 the end the stack must be empty.}
 
+\begin{dia}
+  \cellrowst{s}{1.3}{dead/(,dead/[,soft/],cell/)}
+  \node[note, anchor=east] at (-0.5,1.3) {input};
+  \node[cell] (t1) at (3.6,0.4) {(};
+  \node[cell] (t2) at (3.6,1.2) {[};
+  \node[note, anchor=west] at (4.2,1.2) {top};
+  \node[note, anchor=east] at (3.0,0.8) {stack};
+  \draw[flow] (1.6,0.9) to[out=-40,in=200] (3.1,1.2);
+  \node[note, anchor=west] at (4.2,0.4) {\texttt{]} pops \texttt{[} --- match};
+  \node[note, anchor=west] at (4.2,-0.15) {\texttt{)} then pops \texttt{(} --- match};
+  \node[note, anchor=west] at (4.2,-0.7) {stack empty $\Rightarrow$ valid};
+\end{dia}
+
+\textbf{How it works.} Nesting is last-in, first-out by definition: the
+bracket you must close next is always the most recent one you opened. That is
+precisely what a stack models, which is why no other data structure is
+needed.
+
+Two endings are easy to forget. A closer arriving when the stack is empty
+means there was never a matching opener, so \texttt{isEmpty()} must be checked
+before \texttt{pop()} or it throws. And a non-empty stack at the end means
+openers were never closed, which is also invalid --- hence the return value
+is \texttt{stack.isEmpty()}, not \texttt{true}.
+
 \solheading
 \begin{lstlisting}[style=java]
 public static boolean isValid(String s) {
@@ -28,19 +52,46 @@ public static boolean isValid(String s) {
 }
 \end{lstlisting}
 
-\cost{$O(n)$ time, $O(n)$ space.}
-\trap{Two endings get forgotten. Popping an empty stack on a stray closer
-throws, so test \texttt{isEmpty()} first; and leaving the stack non-empty at
-the end means unclosed openers, which is also invalid.}
+Short-circuit evaluation does the work: \texttt{stack.isEmpty() ||
+stack.pop() != '('} never calls \texttt{pop} on an empty stack.
+
+\cost{$O(n)$ time, $O(n)$ space in the worst case of all openers.}
+\trap{Counting brackets instead of stacking them. \texttt{"([)]"} has equal
+counts of each kind and is invalid; only a stack catches the ordering.}
 
 % ------------------------------------------------------------------
 \problem{Evaluate reverse Polish notation}{Medium}
 
-Evaluate tokens like \texttt{["2","1","+","3","*"]}, which means
+Evaluate tokens like \texttt{["2","1","+","3","*"]}, meaning
 $(2+1)\times 3 = 9$.
 
-\idea{Push numbers. On an operator, pop two, apply, push the result. The first
-value popped is the right-hand operand.}
+\idea{Push numbers. On an operator, pop two, apply, push the result.}
+
+\begin{dia}
+  \cellrowst{t}{1.5}{dead/2,dead/1,dead/+,soft/3,cell/*}
+  \node[note, anchor=east] at (-0.5,1.5) {tokens};
+  \node[cell] (a) at (0.6,0.3) {3};
+  \node[note, anchor=east] at (0.0,0.3) {stack};
+  \node[cell] (b) at (1.8,0.3) {3};
+  \node[cell] (c) at (1.8,-0.5) {3};
+  \node[hot] (d) at (3.4,-0.1) {9};
+  \draw[flow] (1.1,0.3) -- (1.3,0.3);
+  \draw[flow] (2.3,-0.1) -- (2.9,-0.1);
+  \node[note] at (0.6,0.95) {after +};
+  \node[note] at (1.8,0.95) {push 3};
+  \node[note] at (3.4,0.95) {after *};
+\end{dia}
+
+\textbf{How it works.} Postfix notation needs no precedence rules and no
+parentheses, because the order of the tokens already encodes the order of
+evaluation. Every operator applies to the two most recently produced values,
+which is exactly what sits on top of the stack.
+
+The order of the two pops matters. The first value popped is the
+\emph{right-hand} operand, because it was pushed last. For \texttt{+} and
+\texttt{*} the mistake is invisible; for \texttt{-} and \texttt{/} it gives
+the wrong sign or the reciprocal, so the bug survives your first two test
+cases and fails the third.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -72,9 +123,7 @@ private static int apply(int a, int b, String op) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(n)$ space.}
-\trap{Popping the operands in the wrong order. It is invisible for
-\texttt{+} and \texttt{*} and wrong for \texttt{-} and \texttt{/}, so the bug
-survives your first two test cases.}
+\trap{Popping the operands in the wrong order.}
 
 % ------------------------------------------------------------------
 \problem{Next greater element}{Medium}
@@ -82,9 +131,37 @@ survives your first two test cases.}
 For every element, find the first element to its right that is larger, or
 $-1$. \texttt{[2,1,2,4]} gives \texttt{[4,2,4,-1]}.
 
-\idea{A monotonic stack of \emph{indices} still waiting for an answer. When a
-new value arrives, it resolves every waiting index smaller than it. Each
-index is pushed and popped once.}
+\idea{A monotonic stack of \emph{indices} still waiting for an answer. A new
+value resolves every waiting index smaller than it.}
+
+\begin{dia}
+  \cellrowst{a}{1.4}{dead/2,dead/1,dead/2,hot/4}
+  \idxrow{0.78}{3}
+  \node[note, anchor=east] at (-0.5,1.4) {input};
+  \node[cell, minimum width=9mm] (w1) at (0.8,0) {0};
+  \node[cell, minimum width=9mm] (w2) at (1.8,0) {1};
+  \node[cell, minimum width=9mm] (w3) at (2.8,0) {2};
+  \node[note, anchor=east] at (0.1,0) {waiting};
+  \draw[flow] (2.4,0.45) -- (2.8,0.3);
+  \node[note, anchor=west] at (3.6,0) {4 resolves all three};
+  \cellrowst{o}{-1.1}{hot/4,hot/2,hot/4,cell/-1}
+  \node[note, anchor=east] at (-0.5,-1.1) {answer};
+\end{dia}
+
+\textbf{How it works.} The stack holds indices whose answer is not yet known,
+and it is always in decreasing order of value --- that is the invariant that
+makes it work. When a new value arrives, every index on the stack with a
+smaller value has just found its next greater element, so each one is popped
+and written.
+
+The cost argument is the interesting part. The inner \texttt{while} looks like
+it could make this quadratic, but each index is pushed exactly once and popped
+at most once over the entire run. The total number of inner iterations is
+therefore bounded by $n$, so the whole thing is linear --- an amortised
+argument, not a per-step one.
+
+Store indices rather than values, or you cannot write the answer back into the
+right slot.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -103,11 +180,12 @@ public static int[] nextGreater(int[] a) {
 }
 \end{lstlisting}
 
-\cost{$O(n)$ time --- the inner \texttt{while} is amortised, since every index
-leaves the stack at most once. $O(n)$ space.}
-\trap{The nested-loop version is $O(n^2)$ and looks so natural that people
-write it without noticing. Also store indices, not values, or you cannot
-write the answer back to the right slot.}
+Whatever is left on the stack at the end has no greater element to its right,
+and those slots keep the $-1$ from \texttt{Arrays.fill}.
+
+\cost{$O(n)$ time amortised, $O(n)$ space.}
+\trap{The nested-loop version is $O(n^2)$ and reads so naturally that people
+write it without noticing.}
 \alsoknown{``Daily temperatures'', where the answer is the gap \texttt{i - j}
 rather than the value.}
 
@@ -116,9 +194,32 @@ rather than the value.}
 
 A stack that also reports its minimum in $O(1)$.
 
-\idea{Keep a second stack holding the minimum \emph{as of} each push. Pushing
-records the smaller of the new value and the current minimum; popping
-discards both in step, so the two stacks stay aligned.}
+\idea{A second stack holding the minimum \emph{as of} each push. The two move
+in lockstep.}
+
+\begin{dia}
+  \node[note] at (0.5,1.3) {values};
+  \node[cell] at (0.5,0.6) {7};
+  \node[cell] at (0.5,-0.2) {2};
+  \node[cell] at (0.5,-1.0) {5};
+  \node[note] at (2.3,1.3) {minima};
+  \node[soft] at (2.3,0.6) {2};
+  \node[soft] at (2.3,-0.2) {2};
+  \node[soft] at (2.3,-1.0) {5};
+  \node[ptr, anchor=west] at (3.0,0.6) {top};
+  \node[note, anchor=west] at (3.9,0.6) {\texttt{getMin()} reads here};
+  \node[note, anchor=west] at (3.9,-0.2) {each entry: min at that moment};
+  \node[note, anchor=west] at (3.9,-1.0) {popping discards both};
+\end{dia}
+
+\textbf{How it works.} The trick is to store, alongside each value, what the
+minimum was when that value was pushed. Then popping a value automatically
+restores the previous minimum --- it is sitting right underneath on the second
+stack.
+
+A single \texttt{int min} field cannot do this. It is correct until you pop
+the minimum itself, at which point the previous minimum is unrecoverable
+without scanning the whole stack.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -141,10 +242,12 @@ class MinStack {
 }
 \end{lstlisting}
 
-\cost{$O(1)$ for every operation, $O(n)$ space.}
-\trap{Keeping a single \texttt{int min} field instead. It is right until you
-pop the minimum, and then there is no way to recover the previous one without
-scanning.}
+\cost{$O(1)$ for every operation, $O(n)$ space --- you trade memory for the
+constant-time minimum.}
+\trap{Pushing onto \texttt{minima} only when the new value is a new minimum.
+That saves space but breaks the lockstep, so \texttt{pop} then has to decide
+whether to pop the second stack, and getting that condition wrong is the
+usual bug.}
 
 % ------------------------------------------------------------------
 \problem{Simplify a Unix path}{Medium}
@@ -152,8 +255,32 @@ scanning.}
 Turn \texttt{"/a/./b/../../c/"} into \texttt{"/c"}. Handle \texttt{.},
 \texttt{..} and repeated slashes.
 
-\idea{Split on slashes and push each real component. \texttt{..} pops,
-\texttt{.} and empty components are skipped. Join what is left.}
+\idea{Split on slashes and push each real component. \texttt{..} pops;
+\texttt{.} and empty components are skipped.}
+
+\begin{dia}
+  \cellrowst{t}{1.2}{soft/a,dead/.,soft/b,hot/..,hot/..,soft/c}
+  \node[note, anchor=east] at (-0.5,1.2) {components};
+  \node[cell, minimum width=10mm] at (0.0,0) {a};
+  \node[cell, minimum width=10mm] at (1.1,0) {b};
+  \node[note, anchor=east] at (-0.6,0) {after \texttt{b}};
+  \node[cell, minimum width=10mm] at (0.0,-0.9) {c};
+  \node[note, anchor=east] at (-0.6,-0.9) {after both \texttt{..} and \texttt{c}};
+  \node[note, anchor=west] at (2.4,0) {\texttt{..} removes the last one};
+  \node[note, anchor=west] at (2.4,-0.9) {result: \texttt{/c}};
+\end{dia}
+
+\textbf{How it works.} Splitting on \texttt{"/"} produces empty strings for
+leading, trailing and doubled slashes, so those three cases collapse into one
+test. \texttt{.} means ``stay here'' and is simply skipped. \texttt{..} means
+``go up'', which is a pop.
+
+The deque is used as a list here, not a stack: components are appended at the
+end and removed from the end, but the final join reads them front to back.
+
+\texttt{pollLast} rather than \texttt{removeLast} is deliberate. At the root
+there is nothing to go up to, and \texttt{..} must do nothing --- \texttt{poll}
+returns \texttt{null} on an empty deque where \texttt{remove} throws.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -172,7 +299,5 @@ public static String simplify(String path) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(n)$ space.}
-\trap{\texttt{..} at the root must do nothing, not throw ---
-\texttt{pollLast} returns \texttt{null} on an empty deque where
-\texttt{removeLast} throws. And the result for an empty stack is
-\texttt{"/"}, not \texttt{""}.}
+\trap{Returning \texttt{""} for a path that resolves to the root. The answer
+is \texttt{"/"}.}

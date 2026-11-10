@@ -1,14 +1,37 @@
-\chapterpage{Strings}{Eight problems. Strings are the most common opener in a
-screen because they are quick to state and full of edge cases.}
+\chapterpage{Strings}{Eight problems. Strings open most screens because they
+are quick to state and full of edge cases.}
 
 % ------------------------------------------------------------------
 \problem{Reverse the words in a sentence}{Easy}
 
 Given a sentence, return it with the words in reverse order and exactly one
-space between them. Leading, trailing and repeated spaces are removed.
-\texttt{"\ the sky\ \ is blue "} becomes \texttt{"blue is sky the"}.
+space between them. Leading, trailing and repeated spaces disappear.
 
-\idea{Split on runs of whitespace, walk the parts backwards, join with a single space.}
+\idea{Split on runs of whitespace, walk the parts backwards, join with a single
+space.}
+
+\begin{dia}
+  \node[cell, minimum width=16mm] (w0) at (0,0) {the};
+  \node[cell, minimum width=16mm] (w1) at (1.75,0) {sky};
+  \node[cell, minimum width=16mm] (w2) at (3.5,0) {is};
+  \node[cell, minimum width=16mm] (w3) at (5.25,0) {blue};
+  \node[note, anchor=east] at (-0.95,0) {split};
+  \node[hot, minimum width=16mm] at (0,-1.5) {blue};
+  \node[hot, minimum width=16mm] at (1.75,-1.5) {is};
+  \node[hot, minimum width=16mm] at (3.5,-1.5) {sky};
+  \node[hot, minimum width=16mm] at (5.25,-1.5) {the};
+  \node[note, anchor=east] at (-0.95,-1.5) {join};
+  \draw[flow] (w3) to[out=-70,in=70] (5.25,-1.12);
+  \draw[flow] (w0) to[out=-110,in=110] (0,-1.12);
+\end{dia}
+
+\textbf{How it works.} The whole problem is choosing the right separator. A
+sentence like \texttt{"\ the sky\ \ is blue "} has a leading space, a double
+space in the middle and a trailing space. \texttt{trim()} removes the two
+ends; the regular expression \texttt{\textbackslash s+} means ``one or more
+whitespace characters'', so a run of any length counts as a single separator.
+With those two steps the array holds exactly the words, and reversing it is a
+backwards loop.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -25,19 +48,45 @@ public static String reverseWords(String s) {
 }
 \end{lstlisting}
 
+The \texttt{out.length() > 0} test is how you get spaces \emph{between} words
+without a trailing one: append the separator before each word except the
+first.
+
 \cost{$O(n)$ time, $O(n)$ space.}
-\trap{Splitting on \texttt{" "} instead of \texttt{"\textbackslash\textbackslash s+"} leaves empty strings in the
-array when spaces repeat. And \texttt{trim()} first, or a leading space gives
-you an empty first element anyway.}
+\trap{Splitting on \texttt{" "} instead of \texttt{"\textbackslash\textbackslash s+"} leaves empty strings in
+the array when spaces repeat. Forgetting \texttt{trim()} does the same at the
+ends.}
 
 % ------------------------------------------------------------------
 \problem{Valid palindrome, ignoring punctuation}{Easy}
 
-Return \texttt{true} if the string reads the same forwards and backwards when
-you consider only letters and digits, and ignore case.
-\texttt{"A man, a plan, a canal: Panama"} is a palindrome.
+Return \texttt{true} if the string reads the same both ways when you consider
+only letters and digits, and ignore case.
 
-\idea{Two pointers walking inwards, each skipping anything that is not alphanumeric.}
+\idea{Two pointers walking inwards, each skipping anything that is not
+alphanumeric.}
+
+\begin{dia}
+  \cellrowst{p}{0}{soft/A,dead/{,},dead/{ },soft/m,soft/a,soft/n,dead/{,},soft/a}
+  \node[ptr] at (0,0.75) {i};
+  \node[ptr] at (5.6,0.75) {j};
+  \draw[flow] (0,0.6) -- (0,0.44);
+  \draw[flow] (5.6,0.6) -- (5.6,0.44);
+  \draw[flow] (0.3,-0.62) -- (1.9,-0.62);
+  \draw[flow] (5.3,-0.62) -- (4.5,-0.62);
+  \caplabel{2.8}{-1.15}{each pointer skips over what is not a letter or digit};
+\end{dia}
+
+\textbf{How it works.} Rather than building a cleaned copy of the string
+(which costs a second array), the two pointers do the cleaning as they move.
+The outer \texttt{while} advances them towards each other; the two inner
+\texttt{while} loops consume any run of punctuation before a comparison is
+made. Only when both pointers are parked on real characters does the
+comparison happen, and then both step inward together.
+
+The subtle part is that the inner loops need their own \texttt{i < j} guard.
+Without it, a string of pure punctuation would run \texttt{i} straight off the
+end of the string and throw.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -55,18 +104,40 @@ public static boolean isPalindrome(String s) {
 }
 \end{lstlisting}
 
-\cost{$O(n)$ time, $O(1)$ space.}
-\trap{The inner skip loops need their own \texttt{i < j} guard, or a string of
-pure punctuation runs the pointer off the end.}
+\cost{$O(n)$ time, $O(1)$ space --- nothing is allocated.}
+\trap{Dropping the \texttt{i < j} guard from the skip loops. Also, comparing
+without \texttt{toLowerCase} on both sides: \texttt{'A'} and \texttt{'a'} are
+different \texttt{char} values.}
 
 % ------------------------------------------------------------------
 \problem{First non-repeating character}{Easy}
 
-Return the index of the first character that appears exactly once, or
-$-1$. In \texttt{"loveleetcode"} the answer is 2.
+Return the index of the first character that appears exactly once, or $-1$.
 
-\idea{Count every character in one pass, then scan the string again in order and
-return the first with count 1. Two passes beat one clever pass.}
+\idea{Count every character in one pass, then scan the \emph{string} again in
+order and return the first whose count is 1.}
+
+\begin{dia}
+  \cellrowst{s}{0}{soft/l,soft/o,hot/v,soft/e,soft/l,soft/e,soft/e}
+  \idxrow{-0.62}{6}
+  \node[note, anchor=east] at (-0.5,0) {pass 2};
+  \node[cell, minimum width=9mm] (f0) at (0,1.5) {l:2};
+  \node[cell, minimum width=9mm] (f1) at (1.0,1.5) {o:1};
+  \node[cell, minimum width=9mm] (f2) at (2.0,1.5) {v:1};
+  \node[cell, minimum width=9mm] (f3) at (3.0,1.5) {e:3};
+  \node[note, anchor=east] at (-0.5,1.5) {pass 1};
+  \draw[flow] (1.6,0.44) -- (1.6,1.12);
+  \caplabel{2.4}{-1.1}{index 2 is the first character whose count is 1};
+\end{dia}
+
+\textbf{How it works.} Two passes, and the order of the second one is the
+whole point. After the counting pass you know how often every character
+occurs, but a \texttt{HashMap} has no order, so you cannot ask it ``which of
+these came first''. The string itself still knows. Re-scanning it in index
+order and stopping at the first count of 1 gives the answer directly.
+
+For a fixed alphabet an \texttt{int[128]} beats a map: no boxing, no hashing,
+and the array is cheap to allocate.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -80,20 +151,45 @@ public static int firstUnique(String s) {
 }
 \end{lstlisting}
 
-\cost{$O(n)$ time, $O(1)$ space (the table is a fixed 128).}
-\trap{Scanning the \emph{map} rather than the string for the second pass loses
-the ordering. \texttt{HashMap} has no order; if you must use one, use
-\texttt{LinkedHashMap}, or just re-scan the string as above.}
+\cost{$O(n)$ time, $O(1)$ space --- the table is a fixed 128 entries.}
+\trap{Scanning the map rather than the string on the second pass. If the input
+can be any Unicode character, \texttt{int[128]} overflows its bounds --- use a
+\texttt{LinkedHashMap}, which does preserve insertion order.}
 
 % ------------------------------------------------------------------
 \problem{Run-length encoding}{Easy}
 
-Replace each maximal run of identical characters with the character followed by
-the run length, writing a run of one as just the character.
-\texttt{"aaabccddd"} becomes \texttt{"a3bc2d3"}.
+Replace each maximal run of identical characters with the character followed
+by the run length, writing a run of one as just the character.
 
 \idea{One pointer at the start of the run, a second scanning forward while the
 character is unchanged.}
+
+\begin{dia}
+  \cellrowst{r}{0}{hot/a,hot/a,hot/a,soft/b,warm/c,warm/c,cool/d,cool/d,cool/d}
+  \draw[span] (-0.4,-0.62) -- (1.9,-0.62);
+  \draw[span] (2.1,-0.62) -- (2.7,-0.62);
+  \draw[span] (2.9,-0.62) -- (4.3,-0.62);
+  \draw[span] (4.5,-0.62) -- (6.7,-0.62);
+  \node[note] at (0.8,-1.15) {a3};
+  \node[note] at (2.4,-1.15) {b};
+  \node[note] at (3.6,-1.15) {c2};
+  \node[note] at (5.6,-1.15) {d3};
+  \node[ptr] at (-0.0,0.75) {i};
+  \node[ptr] at (2.4,0.75) {j};
+  \draw[flow] (0,0.6) -- (0,0.44);
+  \draw[flow] (2.4,0.6) -- (2.4,0.44);
+\end{dia}
+
+\textbf{How it works.} \texttt{i} marks where the current run starts.
+\texttt{j} runs ahead for as long as the character matches, so when it stops,
+\texttt{j - i} is exactly the run length and \texttt{j} is the start of the
+next run. Setting \texttt{i = j} at the end of each iteration means every
+character is examined once by \texttt{j} and never revisited --- the two
+pointers together make one pass over the string, not a pass per run.
+
+Appending the length only when \texttt{j - i > 1} is what produces \texttt{b}
+rather than \texttt{b1}.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -113,10 +209,11 @@ public static String compress(String s) {
 }
 \end{lstlisting}
 
-\cost{$O(n)$ time, $O(n)$ space.}
+\cost{$O(n)$ time, $O(n)$ space for the output.}
 \trap{Run lengths can have more than one digit --- \texttt{"z12"} is a valid
-output. Any solution that appends a single \texttt{char} for the count is
-wrong past nine.}
+output, so anything that appends a single \texttt{char} for the count breaks
+past nine. Building the result with \texttt{String +=} turns this into
+$O(n^2)$.}
 \alsoknown{Task 1 of the assessment.}
 
 % ------------------------------------------------------------------
@@ -125,8 +222,29 @@ wrong past nine.}
 Return \texttt{true} if two strings contain the same letters with the same
 multiplicities.
 
-\idea{Count up for the first string, count down for the second, and check nothing
-is left over. Length differing is an instant \texttt{false}.}
+\idea{Count up for the first string and down for the second in the same table.
+If nothing is left over, they match.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.5,0.4) {\texttt{"egg"}};
+  \node[note, anchor=east] at (-0.5,-0.4) {\texttt{"ged"}};
+  \foreach \l/\x in {a/0, d/0.8, e/1.6, g/2.4} {
+    \node[idx] at (\x,0.95) {\l};}
+  \cellrowst{u}{0.4}{cell/0,cell/0,soft/{+1},soft/{+2}}
+  \cellrowst{d}{-0.4}{cell/0,soft/{-1},soft/{-1},soft/{-1}}
+  \cellrowst{t}{-1.4}{cell/0,hot/{-1},cell/0,hot/{+1}}
+  \node[note, anchor=east] at (-0.5,-1.4) {total};
+  \caplabel{1.2}{-2.0}{two non-zero entries, so not an anagram};
+\end{dia}
+
+\textbf{How it works.} An anagram is a statement about counts and nothing
+else, so you never need to sort. Walking both strings in the same loop is only
+possible because a length mismatch is rejected first --- that early return is
+doing real work, not just guarding.
+
+The array index \texttt{a.charAt(i) - 'a'} maps \texttt{'a'} to 0,
+\texttt{'b'} to 1 and so on. It is fast and it is also the assumption that
+breaks if the input is not pure lowercase.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -143,19 +261,33 @@ public static boolean isAnagram(String a, String b) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(1)$ space.}
-\trap{The \texttt{- 'a'} indexing assumes lowercase letters only. If the input
-can be any character, use a \texttt{HashMap} or a 128-entry table --- an
-uppercase letter would write to a negative index and throw.}
+\trap{\texttt{- 'a'} assumes lowercase. An uppercase letter gives a negative
+index and throws; a digit or space lands outside 0--25 too. For arbitrary
+input use a \texttt{HashMap} or a 128-entry table.}
 
 % ------------------------------------------------------------------
 \problem{Longest common prefix}{Easy}
 
-Given an array of strings, return the longest prefix common to all of them, or
-\texttt{""}.
+Return the longest prefix shared by every string in an array, or \texttt{""}.
 
-\idea{Compare column by column: take character $i$ of the first string and check
-it against character $i$ of every other. Stop at the first mismatch or the
-first string that ends.}
+\idea{Compare column by column rather than string by string: take character $i$
+of the first word and check it against character $i$ of all the others.}
+
+\begin{dia}
+  \cellrowst{a}{0.85}{cool/f,cool/l,cool/o,soft/w,cell/e,cell/r}
+  \cellrowst{b}{0}{cool/f,cool/l,cool/o,soft/o,cell/d,dead/{}}
+  \cellrowst{c}{-0.85}{cool/f,cool/l,cool/o,soft/c,dead/{},dead/{}}
+  \draw[flow] (2.4,1.55) -- (2.4,1.27);
+  \node[ptr] at (2.4,1.75) {i = 3};
+  \caplabel{2.0}{-1.6}{first mismatch at column 3, so the answer is \texttt{"flo"}};
+\end{dia}
+
+\textbf{How it works.} The prefix can never be longer than the shortest word,
+and it can never survive a disagreement in any column. Scanning vertically
+means you stop at the first column that fails, and that column index is
+exactly the length of the answer. The outer loop is bounded by the first
+word's length, so the inner guard \texttt{i >= words[w].length()} is what
+handles a word that is shorter than the first one.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -173,20 +305,38 @@ public static String longestCommonPrefix(String[] words) {
 }
 \end{lstlisting}
 
-\cost{$O(\text{total characters})$ time, $O(1)$ extra space.}
-\trap{Forgetting the \texttt{i >= words[w].length()} check throws
-\texttt{StringIndexOutOfBounds} as soon as one word is a strict prefix of
-another (\texttt{["ab", "a"]}).}
+\cost{$O(\text{total characters})$ in the worst case, $O(1)$ extra space.}
+\trap{Omitting the length check throws \texttt{StringIndexOutOfBounds} the
+moment one word is a strict prefix of another, as in
+\texttt{["ab", "a"]}.}
 
 % ------------------------------------------------------------------
 \problem{Compare two version strings}{Medium}
 
-Versions are dot-separated numbers: \texttt{"1.2.10"}. Return $-1$, $0$ or $1$
-for less than, equal, greater than. Missing components count as zero, so
-\texttt{"1.0"} equals \texttt{"1"}.
+Versions are dot-separated numbers. Return $-1$, $0$ or $1$. Missing
+components count as zero, so \texttt{"1.0"} equals \texttt{"1"}.
 
-\idea{Split both, then walk to the longer length, treating a missing component as
+\idea{Split both, walk to the longer length, and treat a missing component as
 zero. Compare numerically, never as text.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.5,0.45) {\texttt{"1.2.10"}};
+  \node[note, anchor=east] at (-0.5,-0.45) {\texttt{"1.2"}};
+  \cellrowst{v}{0.45}{soft/1,soft/2,hot/10}
+  \cellrowst{w}{-0.45}{soft/1,soft/2,dead/0}
+  \node[note, anchor=west] at (2.05,0.45) {equal};
+  \node[note, anchor=west] at (2.05,-0.45) {equal};
+  \caplabel{3.3}{-1.15}{the missing third component is read as 0, so \texttt{"1.2.10"} wins};
+\end{dia}
+
+\textbf{How it works.} Padding with zeros instead of stopping at the shorter
+array is what makes \texttt{"1.0"} and \texttt{"1"} compare equal. The loop
+runs to \texttt{max(x.length, y.length)} and the conditional expression
+supplies a 0 whenever an index is past the end of one side.
+
+Parsing each component into a number is the other half. As text,
+\texttt{"10"} sorts before \texttt{"9"} because \texttt{'1' < '9'}; as
+numbers, it does not.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -204,18 +354,42 @@ public static int compareVersions(String a, String b) {
 \end{lstlisting}
 
 \cost{$O(n)$ time.}
-\trap{Two of them. \texttt{split(".")} splits on \emph{every character},
-because \texttt{.} is a regex wildcard --- you must escape it. And comparing
-the components as strings makes \texttt{"1.10"} less than \texttt{"1.9"}.}
+\trap{\texttt{split(".")} splits on \emph{every character}, because \texttt{.}
+is a regex wildcard matching anything --- you must escape it as
+\texttt{"\textbackslash\textbackslash ."}. The result is an empty array and a silent wrong answer.}
 
 % ------------------------------------------------------------------
 \problem{Longest substring without repeating characters}{Medium}
 
 Return the length of the longest substring in which no character repeats.
-In \texttt{"abcabcbb"} the answer is 3.
 
-\idea{A sliding window. Remember the last index at which each character was seen;
-when you meet a repeat that is inside the window, jump the left edge past it.}
+\idea{A sliding window. Remember the last index at which each character was
+seen; when you meet a repeat that lies inside the window, jump the left edge
+past it.}
+
+\begin{dia}
+  \cellrowst{q}{0}{dead/a,soft/b,soft/c,hot/a,cell/b,cell/c,cell/b,cell/b}
+  \idxrow{-0.62}{7}
+  \node[ptr] at (0.8,0.78) {left};
+  \node[ptr] at (2.4,0.78) {right};
+  \draw[flow] (0.8,0.62) -- (0.8,0.44);
+  \draw[flow] (2.4,0.62) -- (2.4,0.44);
+  \draw[back] (2.4,1.15) to[out=160,in=20] (0.1,1.15);
+  \caplabel{1.3}{1.5}{\texttt{a} was last seen at 0, so left jumps to 1};
+  \draw[span] (0.4,-1.0) -- (2.8,-1.0);
+  \caplabel{1.6}{-1.5}{current window, length 3};
+\end{dia}
+
+\textbf{How it works.} The window \texttt{[left, right]} is maintained as an
+invariant: it never contains a repeat. Each step extends \texttt{right} by one
+and then repairs the invariant if the new character broke it.
+
+The repair is the interesting line. If the character was last seen at index
+\texttt{prev}, every window containing both occurrences is invalid, so the
+left edge must move to \texttt{prev + 1}. But only if \texttt{prev} is
+\emph{inside} the current window --- hence \texttt{prev >= left}. A character
+seen long ago and already excluded must not drag the left edge backwards; the
+window only ever grows to the right.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -234,7 +408,8 @@ public static int longestUnique(String s) {
 }
 \end{lstlisting}
 
-\cost{$O(n)$ time, $O(\min(n,\Sigma))$ space.}
-\trap{The \texttt{prev >= left} test is the whole problem. Without it a
-character seen long ago, already outside the window, drags the left edge
-\emph{backwards} and the window stops being valid.}
+\cost{$O(n)$ time --- each index is visited once by \texttt{right} and the left
+edge only moves forward. $O(\min(n,\Sigma))$ space.}
+\trap{Omitting \texttt{prev >= left}. The code still runs and gives the right
+answer on short examples, then fails on inputs where a character recurs after
+leaving the window.}

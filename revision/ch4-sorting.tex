@@ -1,16 +1,39 @@
 \chapterpage{Sorting, intervals and comparators}{Seven problems. Writing a
 correct multi-key comparator under time pressure is a skill in itself, and
-interval sweeps are the most common ``medium'' in a screen.}
+interval sweeps are the most common medium-difficulty question in a screen.}
 
 % ------------------------------------------------------------------
 \problem{Sort by frequency, then by value}{Medium}
 
-Sort the array so that more frequent values come first, and equally frequent
-values come in ascending numeric order.
-\texttt{[1,1,2,2,2,3]} gives \texttt{[2,2,2,1,1,3]}.
+More frequent values come first; equally frequent values come in ascending
+numeric order. \texttt{[1,1,2,2,2,3]} gives \texttt{[2,2,2,1,1,3]}.
 
-\idea{Count first, then sort the \emph{boxed} values with a two-key comparator.
-Primitive arrays cannot take a comparator, so boxing is required.}
+\idea{Count first, then sort the \emph{boxed} values with a two-key
+comparator.}
+
+\begin{dia}
+  \node[soft, minimum width=13mm] at (0,0) {1 : 2};
+  \node[soft, minimum width=13mm] at (1.5,0) {2 : 3};
+  \node[soft, minimum width=13mm] at (3.0,0) {3 : 1};
+  \node[note, anchor=east] at (-0.8,0) {counts};
+  \node[note] at (0,0.62) {value : freq};
+  \node[hot, minimum width=13mm] at (0,-1.3) {2 : 3};
+  \node[warm, minimum width=13mm] at (1.5,-1.3) {1 : 2};
+  \node[cool, minimum width=13mm] at (3.0,-1.3) {3 : 1};
+  \node[note, anchor=east] at (-0.8,-1.3) {sorted};
+  \draw[flow] (1.5,-0.42) -- (1.5,-0.88);
+  \node[note, anchor=west] at (4.0,-1.3) {freq desc, then value asc};
+\end{dia}
+
+\textbf{How it works.} The comparator reads as two questions asked in order.
+Are the frequencies different? Then that decides it, descending --- note the
+arguments reversed, \texttt{compare(fy, fx)}, which is how you get descending
+from an ascending comparison. Otherwise fall through to the value, ascending.
+
+The practical obstacle is that \texttt{Arrays.sort(int[], Comparator)} does
+not exist. Primitive arrays cannot take a comparator at all, so you must box
+into \texttt{Integer[]} or sort a \texttt{List<Integer>}. Discovering this at
+minute 50 of a 70-minute test is a bad time to find out.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -34,19 +57,44 @@ public static int[] sortByFrequency(int[] a) {
 \end{lstlisting}
 
 \cost{$O(n\log n)$ time, $O(n)$ space.}
-\trap{\texttt{Arrays.sort(int[], Comparator)} does not exist --- there is no
-such overload, and the compile error surprises people under pressure. Box to
-\texttt{Integer[]} or sort a \texttt{List<Integer>}.}
+\trap{Writing \texttt{fy - fx} instead of \texttt{Integer.compare(fy, fx)}.
+The subtraction overflows for large values and silently inverts the order.}
 
 % ------------------------------------------------------------------
 \problem{Merge overlapping intervals}{Medium}
 
-Given intervals as \texttt{[start, end]}, merge every pair that overlaps.
+Merge every pair of intervals that overlaps.
 \texttt{[[1,3],[2,6],[8,10]]} gives \texttt{[[1,6],[8,10]]}.
 
 \idea{Sort by start. Then one pass: either the next interval starts inside the
-one you are building, in which case stretch its end, or it does not, in which
-case close the current one and open a new one.}
+one you are building, so stretch it, or it does not, so close this one and
+open a new one.}
+
+\begin{dia}
+  \draw[edge] (0,-1.1) -- (6.4,-1.1);
+  \foreach \x/\lab in {0/1, 0.8/2, 1.6/3, 3.2/5, 4.0/6, 5.6/8, 6.4/10} {
+    \draw[edge] (\x,-1.2) -- (\x,-1.0);
+    \node[idx] at (\x,-1.45) {\lab};}
+  \draw[edge, line width=3pt, draw=dsoft] (0,0.5) -- (1.6,0.5);
+  \node[note, anchor=west] at (1.75,0.5) {[1, 3]};
+  \draw[edge, line width=3pt, draw=dsoft] (0.8,0) -- (4.0,0);
+  \node[note, anchor=west] at (4.15,0) {[2, 6]};
+  \draw[edge, line width=3pt, draw=dsoft] (5.6,-0.5) -- (6.4,-0.5);
+  \node[note, anchor=west] at (6.55,-0.5) {[8, 10]};
+  \draw[edge, line width=3pt, draw=dhot] (0,-0.9) -- (4.0,-0.9);
+  \draw[edge, line width=3pt, draw=dhot] (5.6,-0.9) -- (6.4,-0.9);
+  \node[note, anchor=east] at (-0.2,-0.9) {merged};
+\end{dia}
+
+\textbf{How it works.} Sorting by start is what makes a single pass possible:
+afterwards, anything that overlaps the interval you are currently building
+must come next, because it cannot start earlier than something you have
+already passed.
+
+From there each new interval is one of two cases. If its start is at or before
+the current end, the two overlap and merge into one whose end is the
+\emph{later} of the two. If its start is beyond the current end, there is a
+gap, so the current interval is finished and goes to the output.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -71,17 +119,35 @@ public static int[][] merge(int[][] intervals) {
 \end{lstlisting}
 
 \cost{$O(n\log n)$ time, $O(n)$ space.}
-\trap{\texttt{current[1] = a[i][1]} without the \texttt{Math.max} loses a
-fully contained interval: merging \texttt{[1,10]} with \texttt{[2,3]} must
-still end at 10. Also remember to add the last \texttt{current} after the
-loop.}
+\trap{\texttt{current[1] = a[i][1]} without \texttt{Math.max} shrinks the
+interval when one is fully contained in another: merging \texttt{[1,10]} with
+\texttt{[2,3]} must still end at 10. And the final \texttt{out.add(current)}
+after the loop is easy to forget --- without it you lose the last interval
+every time.}
 
 % ------------------------------------------------------------------
 \problem{Can one person attend all meetings?}{Easy}
 
-Given meeting intervals, return \texttt{true} if none of them overlap.
+Return \texttt{true} if no two meetings overlap.
 
 \idea{Sort by start; any overlap is then between neighbours.}
+
+\begin{dia}
+  \draw[edge] (0,-0.75) -- (6.0,-0.75);
+  \draw[edge, line width=3pt, draw=dcool] (0,0.3) -- (1.6,0.3);
+  \draw[edge, line width=3pt, draw=dcool] (1.6,-0.1) -- (3.2,-0.1);
+  \draw[edge, line width=3pt, draw=dhot] (2.8,-0.5) -- (4.8,-0.5);
+  \node[note, anchor=west] at (5.0,0.3) {ok};
+  \node[note, anchor=west] at (5.0,-0.1) {ok, touching};
+  \node[note, anchor=west] at (5.0,-0.5) {overlap};
+  \draw[flow] (2.8,-1.15) -- (2.8,-0.85);
+  \caplabel{2.8}{-1.45}{starts before the previous one ended};
+\end{dia}
+
+\textbf{How it works.} After sorting, a conflict can only be between
+consecutive meetings. If meeting $i$ starts before meeting $i-1$ ends, they
+clash; and if no consecutive pair clashes then no pair does at all, because
+any later meeting starts no earlier than its predecessor.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -96,19 +162,44 @@ public static boolean canAttendAll(int[][] meetings) {
 \end{lstlisting}
 
 \cost{$O(n\log n)$ time.}
-\trap{Whether touching intervals count as overlapping. \texttt{[1,5]} and
-\texttt{[5,9]} do not overlap if the end is exclusive --- hence \texttt{<} and
-not \texttt{<=}. The statement decides; read it.}
+\trap{Whether touching counts as overlapping. \texttt{[1,5]} and
+\texttt{[5,9]} do not clash when the end is exclusive --- hence \texttt{<}
+and not \texttt{<=}. The statement decides; read it twice.}
 
 % ------------------------------------------------------------------
 \problem{Minimum number of meeting rooms}{Medium}
 
 Return the largest number of meetings running at the same time.
 
-\idea{A sweep. Put every start and every end on a timeline, sort both, then walk
-them: a start raises the count, an end lowers it. Track the peak. Ends must
-be processed before starts at the same instant, since a room freed at 5 can
-be reused at 5.}
+\idea{A sweep. Sort all the starts and all the ends independently, then walk
+them: a start raises the count, an end lowers it. Track the peak.}
+
+\begin{dia}
+  \draw[edge] (0,0) -- (6.4,0);
+  \foreach \x/\lab in {0/0, 1.6/5, 3.2/10, 4.8/15, 6.4/20} {
+    \draw[edge] (\x,-0.1) -- (\x,0.1);
+    \node[idx] at (\x,-0.4) {\lab};}
+  \draw[edge, line width=3pt, draw=dsoft] (0,1.5) -- (3.2,1.5);
+  \draw[edge, line width=3pt, draw=dsoft] (1.6,1.05) -- (4.8,1.05);
+  \draw[edge, line width=3pt, draw=dsoft] (3.2,0.6) -- (6.4,0.6);
+  \fill[dhot, opacity=0.55] (1.6,0.35) rectangle (3.2,1.75);
+  \node[note, anchor=west] at (6.6,1.05) {2 at once};
+  \caplabel{2.4}{-0.85}{peak overlap is 2, so 2 rooms};
+\end{dia}
+
+\textbf{How it works.} The pairing between a particular start and its own end
+is irrelevant to the answer --- only the number of events in flight matters.
+That is why the two arrays are sorted \emph{independently}, which surprises
+people the first time they see it.
+
+Walk the starts in order. Before counting each one, release every meeting
+that has already ended by that time. The counter then holds the number of
+concurrent meetings at that instant, and the running maximum is the number of
+rooms.
+
+The comparison \texttt{ends[e] <= starts[s]} is the back-to-back rule: a room
+freed at 5 is available to a meeting starting at 5. Using \texttt{<} books a
+needless second room.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -134,19 +225,42 @@ public static int minRooms(int[][] meetings) {
 \end{lstlisting}
 
 \cost{$O(n\log n)$ time, $O(n)$ space.}
-\trap{\texttt{ends[e] < starts[s]} instead of \texttt{<=} books a second room
-for back-to-back meetings. The two arrays are sorted independently on
-purpose --- the pairing between a particular start and end does not matter.}
+\trap{Trying to keep starts and ends paired. Once you accept that they can be
+separated, the problem collapses to counting.}
 
 % ------------------------------------------------------------------
 \problem{Insert an interval}{Medium}
 
-The intervals are already sorted and non-overlapping. Insert a new one, merging
-where it overlaps.
+The intervals are already sorted and non-overlapping. Insert a new one,
+merging where it overlaps.
 
-\idea{Three phases, no sorting needed: copy everything that ends before the new
-one starts, absorb everything that overlaps into a widened interval, then
-copy the rest.}
+\idea{Three phases and no sorting: copy what ends before the new one starts,
+absorb everything that overlaps into a widened interval, copy the rest.}
+
+\begin{dia}
+  \draw[edge] (0,-0.9) -- (6.4,-0.9);
+  \draw[edge, line width=3pt, draw=ddead] (0,0.55) -- (0.8,0.55);
+  \draw[edge, line width=3pt, draw=dsoft] (1.6,0.55) -- (2.8,0.55);
+  \draw[edge, line width=3pt, draw=dsoft] (3.6,0.55) -- (4.4,0.55);
+  \draw[edge, line width=3pt, draw=ddead] (5.6,0.55) -- (6.4,0.55);
+  \draw[edge, line width=3pt, draw=dwarm] (2.0,0.1) -- (4.0,0.1);
+  \node[note, anchor=west] at (6.6,0.1) {new};
+  \draw[edge, line width=3pt, draw=ddead] (0,-0.5) -- (0.8,-0.5);
+  \draw[edge, line width=3pt, draw=dhot] (1.6,-0.5) -- (4.4,-0.5);
+  \draw[edge, line width=3pt, draw=ddead] (5.6,-0.5) -- (6.4,-0.5);
+  \node[note, anchor=east] at (-0.2,0.55) {before};
+  \node[note, anchor=east] at (-0.2,-0.5) {after};
+  \caplabel{3.0}{-1.3}{copy, absorb, copy};
+\end{dia}
+
+\textbf{How it works.} Because the input is already sorted, the intervals
+split into three consecutive blocks: those entirely to the left of the new
+one, those touching it, and those entirely to the right. Each block is handled
+by its own loop, and none of them needs to look back.
+
+The middle loop widens \texttt{start} and \texttt{end} to cover every
+overlapping interval it consumes. The merged interval is added exactly once,
+after that loop finishes --- adding it inside would emit one copy per overlap.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -169,18 +283,37 @@ public static int[][] insert(int[][] intervals, int[] newInterval) {
 }
 \end{lstlisting}
 
-\cost{$O(n)$ time --- the input is already sorted, so do not re-sort it.}
-\trap{Adding the merged interval inside the second loop, which emits it once
-per overlap. It goes in exactly once, after the loop.}
+\cost{$O(n)$ time. Re-sorting would waste the guarantee you were given.}
+\trap{Adding the merged interval inside the absorb loop.}
 
 % ------------------------------------------------------------------
 \problem{Sort employees by salary then name}{Easy}
 
-Sort records by salary descending, and alphabetically for equal salaries. A
-pure comparator drill --- this exact shape appears in data-processing tasks.
+Salary descending, alphabetical for equal salaries. A pure comparator drill
+--- this exact shape appears in data-processing tasks.
 
-\idea{The \texttt{Comparator} factory methods compose. Build the ordering
+\idea{\texttt{Comparator} factory methods compose. Build the ordering
 declaratively rather than hand-rolling the branches.}
+
+\begin{dia}
+  \node[cell, minimum width=26mm] at (0,0.9) {ada \quad 90};
+  \node[cell, minimum width=26mm] at (0,0.1) {bob \quad 120};
+  \node[cell, minimum width=26mm] at (0,-0.7) {cat \quad 90};
+  \node[hot, minimum width=26mm] at (4.0,0.9) {bob \quad 120};
+  \node[soft, minimum width=26mm] at (4.0,0.1) {ada \quad 90};
+  \node[soft, minimum width=26mm] at (4.0,-0.7) {cat \quad 90};
+  \draw[flow] (1.5,0.1) -- (2.5,0.1);
+  \node[note] at (2.0,0.5) {sort};
+  \draw[span] (5.5,-1.0) -- (5.5,0.4);
+  \node[note, anchor=west] at (5.9,-0.3) {tie on 90,};
+  \node[note, anchor=west] at (5.9,-0.75) {so name decides};
+\end{dia}
+
+\textbf{How it works.} A multi-key ordering is a sequence of questions. Ask
+the first; if it gives a verdict, stop. Otherwise ask the next. The fluent
+form expresses exactly that, and the hand-written form below it is the same
+logic spelled out --- worth knowing both, because under pressure the fluent
+API is easy to half-remember.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -191,7 +324,7 @@ public static void sortEmployees(List<Employee> staff) {
                          .thenComparing(Employee::name));
 }
 
-// the hand-written equivalent, when you cannot remember the fluent form
+// the hand-written equivalent
 public static void sortEmployeesManually(List<Employee> staff) {
     staff.sort((a, b) -> {
         if (a.salary() != b.salary())
@@ -201,19 +334,41 @@ public static void sortEmployeesManually(List<Employee> staff) {
 }
 \end{lstlisting}
 
-\cost{$O(n\log n)$.}
-\trap{\texttt{.reversed()} reverses \emph{everything composed so far}. Chaining
-it on after \texttt{thenComparing(name)} reverses the name order as well. Put
-\texttt{reversed()} on the salary key alone, as above.}
+\cost{$O(n\log n)$. \texttt{List.sort} on objects is a stable merge sort, so
+equal elements keep their input order --- which is why the tie-break is only
+needed when you want a \emph{specific} order, not just a deterministic one.}
+\trap{\texttt{.reversed()} reverses everything composed so far. Chaining it
+after \texttt{thenComparing(name)} reverses the name order too. Put it on the
+salary key alone, as above.}
 
 % ------------------------------------------------------------------
 \problem{Kth largest element}{Medium}
 
-Return the $k$th largest value in an unsorted array (the $k$th in sorted
-descending order, duplicates counted).
+Return the $k$th largest value in an unsorted array, duplicates counted.
 
-\idea{Keep a min-heap of size $k$. The smallest thing in it is, once you have
-seen everything, the $k$th largest overall.}
+\idea{Keep a min-heap of size $k$. Once everything has been seen, its root is
+the $k$th largest overall.}
+
+\begin{dia}
+  \cellrowst{a}{0.9}{cell/3,cell/2,cell/1,cell/5,cell/6,cell/4}
+  \node[note, anchor=east] at (-0.5,0.9) {stream};
+  \node[disc] (r) at (2.0,-0.3) {4};
+  \node[disc] (c1) at (1.2,-1.3) {5};
+  \node[disc] (c2) at (2.8,-1.3) {6};
+  \draw[edge] (r) -- (c1);
+  \draw[edge] (r) -- (c2);
+  \node[note, anchor=east] at (0.4,-0.3) {root = smallest};
+  \node[note, anchor=west] at (3.6,-0.8) {heap holds the top $k=3$};
+  \node[note, anchor=west] at (3.6,-1.35) {so the root is the 3rd largest};
+\end{dia}
+
+\textbf{How it works.} You never need the whole array ordered --- only the
+boundary between the top $k$ and everything else. A min-heap capped at $k$
+maintains exactly that boundary: push each element, and if the heap grows past
+$k$, evict its root, which is the smallest thing currently held.
+
+Whatever is left at the end is the $k$ largest values, and the smallest of
+those --- the root --- is the $k$th largest.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -229,6 +384,5 @@ public static int kthLargest(int[] a, int k) {
 
 \cost{$O(n\log k)$ time, $O(k)$ space. Sorting is $O(n\log n)$ and perfectly
 acceptable when $k$ is close to $n$.}
-\trap{Using a max-heap and polling $k$ times is $O(n + k\log n)$ to build and
-drain --- fine, but it needs all $n$ elements in memory. The size-$k$ min-heap
-is the answer when the input is a stream.}
+\trap{Reaching for a max-heap. It works, but it holds all $n$ elements, which
+defeats the point when the input is a stream or $n$ is large.}

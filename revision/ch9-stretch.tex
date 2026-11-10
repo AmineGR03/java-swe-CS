@@ -1,20 +1,48 @@
-\chapterpage{Stretch}{Five problems above the bar. Nothing here is likely in a
-seventy-minute screen for a final-year internship, and two of them were cut
-from the assessment for exactly that reason. Work them when the first eight
+\chapterpage{Stretch}{Five problems above the bar. Two of them were cut from
+the assessment for exactly that reason. Work them when the first eight
 chapters are comfortable --- the point is that a hard problem on the day
 should feel familiar rather than alarming.}
 
 % ------------------------------------------------------------------
 \problem{Minimum travel time with k free roads}{Hard}
 
-Cities $0 \ldots n-1$ are joined by bidirectional roads $\{u, v, t\}$. You hold
-$k$ passes; using one on a road makes that road cost 0. Return the least time
+Cities $0 \ldots n-1$ are joined by bidirectional roads $\{u, v, t\}$. You
+hold $k$ passes; using one on a road makes it cost 0. Return the least time
 from city 0 to city $n-1$, or $-1$.
 
-\idea{The state you search is not a city, it is a \emph{pair}: the city, and how
-many passes you have spent. Build $k+1$ copies of the graph --- layers --- and
-run one Dijkstra over the lot. From $(u,p)$ each road either costs its time and
-keeps you in layer $p$, or costs nothing and drops you into layer $p+1$.}
+\idea{The state you search is not a city but a \emph{pair}: the city, and how
+many passes you have spent. Build $k+1$ copies of the graph and run one
+Dijkstra over the lot.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.3,0) {layer 0};
+  \node[note, anchor=east] at (-0.3,-1.6) {layer 1};
+  \node[disc] (a0) at (0.6,0) {0};
+  \node[disc] (b0) at (2.6,0) {1};
+  \node[disc] (c0) at (4.6,0) {2};
+  \node[disc] (a1) at (0.6,-1.6) {0};
+  \node[disc] (b1) at (2.6,-1.6) {1};
+  \node[disc] (c1) at (4.6,-1.6) {2};
+  \draw[edge] (a0) -- node[note, above] {5} (b0);
+  \draw[edge] (b0) -- node[note, above] {9} (c0);
+  \draw[edge] (a1) -- node[note, below] {5} (b1);
+  \draw[edge] (b1) -- node[note, below] {9} (c1);
+  \draw[flow] (a0) -- node[note, pos=0.35, left] {0} (b1);
+  \draw[flow] (b0) -- node[note, pos=0.35, left] {0} (c1);
+  \node[note, anchor=west] at (5.6,-0.8) {a diagonal edge spends};
+  \node[note, anchor=west] at (5.6,-1.3) {a pass and costs nothing};
+\end{dia}
+
+\textbf{How it works.} With $k$ passes, knowing only ``where am I'' is not
+enough to decide what to do next --- you also need ``how many passes do I
+have left''. So the state becomes a pair, and the graph becomes $k+1$ stacked
+copies of itself. Horizontal edges cost their time and stay in the layer;
+diagonal edges cost nothing and drop one layer down. Dijkstra on this layered
+graph needs no modification at all.
+
+The first time the queue pops a state at city $n-1$, in any layer, that cost
+is the answer: Dijkstra pops in non-decreasing cost order, and spending fewer
+passes is never cheaper, so there is nothing better still to come.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -64,11 +92,10 @@ public static int minTravelTime(int n, int[][] roads, int k) {
 
 \cost{$O(E \cdot K \log(V \cdot K))$ with $K = \min(k, n-1) + 1$.}
 \trap{Three. $k$ can be $10^9$, so cap the layers at $n-1$ --- a simple path
-uses no more roads than that, and without the cap you allocate a billion rows.
-Distances overflow \texttt{int}, so accumulate in \texttt{long}. And the
-tempting greedy --- find the shortest path, then zero its $k$ heaviest edges
---- is simply wrong: the best route when you have passes is often a different
-route entirely.}
+uses no more roads than that, and without the cap you try to allocate a
+billion rows. Distances overflow \texttt{int}. And the tempting greedy ---
+find the shortest path, then zero its $k$ heaviest edges --- is simply wrong:
+with passes in hand the best route is often a different route entirely.}
 \alsoknown{``Cheapest flights with k stops'' and ``minimum cost path with k
 refuels'' are the same layered-state idea.}
 
@@ -77,18 +104,41 @@ refuels'' are the same layered-state idea.}
 
 Extend the Part B \texttt{CloudStorage} so files can be given a lifetime.
 \texttt{addFileAt(timestamp, user, name, size, ttl)} creates a file alive over
-$[\textit{timestamp}, \textit{timestamp}+\textit{ttl})$;
-\texttt{getFileSizeAt}, \texttt{deleteFileAt} and \texttt{getNLargestAt} see
-only files alive at their timestamp. An expired file frees its owner's
-capacity.
+$[\textit{timestamp}, \textit{timestamp}+\textit{ttl})$; the timestamped
+queries see only files alive at their timestamp; an expired file frees its
+owner's capacity.
 
-\idea{The level attacks the incremental \texttt{used} counter that made the
-earlier levels cheap: bytes now free themselves with no operation to hook.
-Rather than recompute usage on every query, make expiry \emph{lazy} --- each
-timestamped call first deletes everything already dead at its timestamp,
-through the ordinary delete path, and then delegates to the untimed method
-that already exists. One notion of ``the files that exist'', and every earlier
-level untouched.}
+\idea{Make expiry \emph{lazy}. Each timestamped call first deletes everything
+already dead, through the ordinary delete path, then delegates to the untimed
+method that already exists.}
+
+\begin{dia}
+  \draw[edge] (0,0) -- (7.2,0);
+  \foreach \x/\lab in {0/0, 1.8/5, 3.6/10, 5.4/15, 7.2/20} {
+    \draw[edge] (\x,-0.1) -- (\x,0.1);
+    \node[idx] at (\x,-0.42) {\lab};}
+  \draw[edge, line width=3pt, draw=dcool] (0,1.3) -- (3.6,1.3);
+  \node[note, anchor=west] at (3.75,1.3) {/a, ttl 10};
+  \draw[edge, line width=3pt, draw=dwarm] (1.8,0.75) -- (7.2,0.75);
+  \node[note, anchor=west] at (7.35,0.75) {/b};
+  \draw[back] (3.6,1.6) -- (3.6,0.2);
+  \node[note, anchor=west] at (3.75,1.85) {at $t=10$, /a is dead};
+  \node[note, anchor=west] at (3.75,0.3) {and its bytes come back};
+\end{dia}
+
+\textbf{How it works.} The level is designed to attack the incremental
+\texttt{used} counter that made the earlier levels cheap: bytes now free
+themselves with no operation to hook.
+
+There are two ways out. Recompute live usage on every query --- $O(F)$ per
+call, and it leaves ``is this name taken'' ambiguous. Or purge lazily, which
+keeps exactly one notion of ``the files that exist'' and reuses all four
+levels below unchanged. Lazy purging wins, and it is amortised $O(1)$ per
+file because each file is purged once.
+
+Store an \emph{absolute} expiry, not the TTL. A relative lifetime forces you
+to remember a creation time as well, and makes backup and restore ambiguous
+about whether a lifetime restarts.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -120,25 +170,46 @@ private void purge(long now) {
 }
 \end{lstlisting}
 
-\cost{$O(F)$ per timestamped call in the worst case, $O(1)$ amortised per file
-since each file is purged once.}
-\trap{Collecting the dead keys before deleting --- removing from
-\texttt{files} while iterating it throws
-\texttt{ConcurrentModificationException}. Storing an \emph{absolute} expiry
-rather than a TTL, so backup and restore do not restart a lifetime. And
-treating the interval as closed: a file with \texttt{ttl} 10 created at 0 is
-dead \emph{at} 10, not after it.}
+\cost{$O(F)$ for a purge that finds work, amortised $O(1)$ per file overall.}
+\trap{Deleting from \texttt{files} while iterating it throws
+\texttt{ConcurrentModificationException} --- collect the dead keys first. And
+the interval is half-open: a file created at 0 with \texttt{ttl} 10 is dead
+\emph{at} 10, not after it.}
 
 % ------------------------------------------------------------------
 \problem{LRU cache}{Hard}
 
-A fixed-capacity cache with $O(1)$ \texttt{get} and \texttt{put}. When it is
-full, the least recently used entry is evicted. A \texttt{get} counts as a use.
+A fixed-capacity cache with $O(1)$ \texttt{get} and \texttt{put}. When full,
+the least recently used entry is evicted. A \texttt{get} counts as a use.
 
-\idea{\texttt{LinkedHashMap} does this in a dozen lines: construct it in
-access-order mode and override \texttt{removeEldestEntry}. Know the manual
-version too --- a hash map to nodes plus a doubly linked list --- because
-interviewers sometimes ban the shortcut.}
+\idea{\texttt{LinkedHashMap} in access-order mode, with
+\texttt{removeEldestEntry} overridden.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.4,0.5) {before};
+  \cellrowst{a}{0.5}{dead/A,cell/B,cell/C}
+  \node[note, anchor=west] at (1.9,0.5) {A is least recently used};
+  \node[note, anchor=east] at (-0.4,-0.5) {\texttt{get(A)}};
+  \cellrowst{b}{-0.5}{dead/B,cell/C,hot/A}
+  \node[note, anchor=west] at (1.9,-0.5) {A moves to the back; B is now oldest};
+  \node[note, anchor=east] at (-0.4,-1.5) {\texttt{put(D)}};
+  \cellrowst{c}{-1.5}{cell/C,hot/A,hot/D}
+  \node[note, anchor=west] at (1.9,-1.5) {capacity 3, so B is evicted};
+\end{dia}
+
+\textbf{How it works.} The ordering is the whole data structure. Keep entries
+in a line from least to most recently used; every access moves an entry to
+the back; eviction always takes from the front.
+
+\texttt{LinkedHashMap} already maintains such a line, and its third
+constructor argument switches it from insertion order to \emph{access}
+order, which is what makes a \texttt{get} count as a use.
+\texttt{removeEldestEntry} is called after each insertion and evicts the front
+when it returns true.
+
+Know the manual version too --- a \texttt{HashMap} from key to node, plus a
+doubly linked list for the ordering --- because interviewers sometimes ban
+the shortcut. Both are $O(1)$; the library version is twelve lines.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -159,21 +230,38 @@ class LruCache<K, V> extends LinkedHashMap<K, V> {
 \end{lstlisting}
 
 \cost{$O(1)$ expected for both operations.}
-\trap{The third constructor argument. Left at \texttt{false} --- the default
---- you get insertion order, which evicts the oldest \emph{inserted} entry and
-makes it an FIFO cache, not an LRU one. The bug passes any test that never
-re-reads a key.}
+\trap{The third constructor argument. Left at its default of \texttt{false}
+you get insertion order, which evicts the oldest \emph{inserted} entry --- an
+FIFO cache, not an LRU one. The bug passes every test that never re-reads a
+key.}
 
 % ------------------------------------------------------------------
 \problem{Coin change}{Hard}
 
-Given coin denominations and a target, return the fewest coins that sum to it,
-or $-1$. Each denomination may be used any number of times.
+Fewest coins summing to a target, or $-1$. Each denomination may be used any
+number of times.
 
-\idea{Bottom-up dynamic programming over the amount. The best way to make
-$a$ is one coin on top of the best way to make $a - \textit{coin}$, minimised
-over the coins. Fill the table upwards so every subproblem is already solved
-when you need it.}
+\idea{Bottom-up dynamic programming over the amount. The best way to make $a$
+is one coin on top of the best way to make $a - \textit{coin}$.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.5,0.45) {amount};
+  \node[note, anchor=east] at (-0.5,-0.45) {fewest coins};
+  \foreach \a in {0,...,6} {\node[idx] at (\a*0.8,0.45) {\a};}
+  \cellrowst{d}{-0.45}{soft/0,cell/1,cell/2,cell/1,cell/1,cell/2,hot/2}
+  \draw[back] (4.8,-0.9) to[out=210,in=330] (2.4,-0.9);
+  \caplabel{3.6}{-1.5}{$6 = 3 + \text{best}(3)$, and best(3) is 1 coin};
+  \node[note, anchor=west] at (5.6,-0.45) {coins \{1, 3, 4\}};
+\end{dia}
+
+\textbf{How it works.} Fill the table upwards so every subproblem is already
+solved when you need it. For amount $a$, try each coin that fits: using it
+leaves $a - \textit{coin}$, whose answer is already in the table, so the
+candidate is that answer plus one. Take the smallest candidate.
+
+The guard \texttt{best[a - coin] == Integer.MAX\_VALUE} matters. That sentinel
+means ``unreachable''; adding one to it overflows to a large negative number,
+which would then look like an excellent answer and poison every later entry.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -194,25 +282,43 @@ public static int coinChange(int[] coins, int amount) {
 }
 \end{lstlisting}
 
-\cost{$O(\textit{amount} \times \textit{coins})$ time, $O(\textit{amount})$
-space.}
+\cost{$O(\textit{amount} \times \textit{coins})$ time,
+$O(\textit{amount})$ space.}
 \trap{The greedy ``take the biggest coin that fits'' is wrong on coin sets
-like $\{1, 3, 4\}$, where making 6 greedily takes $4+1+1$ and the answer is
-$3+3$. It happens to work on real currency, which is why people trust it. Also
-guard \texttt{best[a - coin] == MAX\_VALUE} before adding one, or it
-overflows to a negative and poisons the table.}
+like $\{1, 3, 4\}$: making 6 greedily takes $4+1+1$, while the answer is
+$3+3$. It happens to work on real currency, which is why people trust it.}
 
 % ------------------------------------------------------------------
 \problem{Longest increasing subsequence}{Hard}
 
-Return the length of the longest strictly increasing subsequence --- the
-elements need not be adjacent. \texttt{[10,9,2,5,3,7,101,18]} gives 4.
+Length of the longest strictly increasing subsequence; the elements need not
+be adjacent. \texttt{[10,9,2,5,3,7,101,18]} gives 4.
 
-\idea{Keep a list \texttt{tails}, where \texttt{tails[i]} is the smallest value
-that can end an increasing subsequence of length $i+1$. That list is always
-sorted, so each new element is placed by binary search: it either extends the
-list or lowers an existing tail, making future extensions easier. The list is
-not itself a valid subsequence --- only its \emph{length} is the answer.}
+\idea{Keep a list \texttt{tails}, where \texttt{tails[i]} is the smallest
+value that can end an increasing subsequence of length $i+1$. Place each new
+element by binary search.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.5,0.9) {input};
+  \cellrowst{a}{0.9}{dead/10,dead/9,soft/2,soft/5,hot/3,cell/7}
+  \node[note, anchor=east] at (-0.5,0) {tails before};
+  \cellrowst{t}{0}{soft/2,soft/5}
+  \node[note, anchor=east] at (-0.5,-0.9) {after 3};
+  \cellrowst{u}{-0.9}{soft/2,hot/3}
+  \node[note, anchor=west] at (2.0,-0.9) {3 replaces 5: same length,};
+  \node[note, anchor=west] at (2.0,-1.4) {lower tail, easier to extend};
+\end{dia}
+
+\textbf{How it works.} \texttt{tails} is always sorted, which is what makes
+the binary search legal. Each new element does one of two things: if it is
+larger than everything in the list it extends it by one; otherwise it
+overwrites the smallest tail that is at least as large.
+
+That overwrite does not lengthen any subsequence, but it lowers the bar for
+future elements, which is why it is worth doing. The subtle point is that
+\texttt{tails} is \emph{not} a valid subsequence of the input --- only its
+length is meaningful. If the problem asks you to reconstruct the actual
+subsequence you need to record predecessors as well.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -235,9 +341,9 @@ public static int lengthOfLIS(int[] a) {
 }
 \end{lstlisting}
 
-\cost{$O(n\log n)$ time, $O(n)$ space. The straightforward DP is $O(n^2)$ and
-is the right answer below a few thousand elements.}
+\cost{$O(n\log n)$ time, $O(n)$ space. The straightforward $O(n^2)$ DP is the
+right answer below a few thousand elements and far easier to get right.}
 \trap{\texttt{(lo + hi) / 2} overflows for huge bounds; \texttt{>>> 1} is the
 habit worth having. And for a \emph{non-strictly} increasing subsequence the
-binary search changes to ``first tail $>$ x'' --- a one-character difference
-that silently changes the answer.}
+search changes to ``first tail $>$ x'' --- a one-character difference that
+silently changes the answer.}

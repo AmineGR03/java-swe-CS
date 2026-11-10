@@ -1,19 +1,50 @@
 \chapterpage{Data processing}{Six problems in the shape candidates actually
 report from consulting-tech screens: parse records, validate them, group them,
-aggregate them, report the top few. Less algorithmic than the rest of the book
-and more likely to be what you face.}
+aggregate them, report the top few. Less algorithmic than the rest of the
+book, and more likely to be what you face.}
 
 % ------------------------------------------------------------------
 \problem{Average salary by department}{Medium}
 
 Records are \texttt{"name,department,salary"}. Return the top $n$ departments
 by average salary as \texttt{"department(average)"}, average descending then
-name ascending. The average is integer division. Ignore any record that does
-not have three fields, has an empty department, or whose salary is not a whole
+name ascending. The average is integer division. Ignore any record without
+exactly three fields, with an empty department, or whose salary is not a whole
 number at least zero.
 
 \idea{Accumulate a \emph{total and a count} per department, never a running
 average. Compute each average once, at the end, from exact numbers.}
+
+\begin{dia}
+  \node[cell, minimum width=30mm] at (0,1.5) {ana,eng,100};
+  \node[cell, minimum width=30mm] at (0,0.75) {bo,eng,200};
+  \node[cell, minimum width=30mm] at (0,0) {cy,sales,150};
+  \node[dead, minimum width=30mm] at (0,-0.75) {bad record};
+  \node[note, anchor=east] at (-1.8,0.4) {input};
+  \node[soft, minimum width=34mm] (e) at (4.6,1.1) {eng : total 300, n = 2};
+  \node[soft, minimum width=34mm] (s) at (4.6,0.3) {sales : total 150, n = 1};
+  \node[hot, minimum width=20mm] at (8.4,1.1) {eng(150)};
+  \node[hot, minimum width=20mm] at (8.4,0.3) {sales(150)};
+  \draw[flow] (1.7,0.7) -- (2.6,0.7);
+  \draw[flow] (6.5,0.7) -- (7.2,0.7);
+  \node[note] at (2.15,1.1) {group};
+  \node[note] at (6.85,1.1) {divide};
+  \caplabel{8.4}{-0.4}{tie on 150, so name decides};
+\end{dia}
+
+\textbf{How it works.} Keeping a total and a count rather than a running
+average is the one design decision that matters. Averaging averages is wrong
+whenever departments differ in size, and it compounds a rounding error at
+every step. With a total and a count the division happens exactly once, on
+exact inputs.
+
+The validation is a ladder of cheap tests applied in order, each one a
+\texttt{continue}. Note that \texttt{parseLong} succeeding is not the same as
+the salary being valid --- \texttt{-5} parses perfectly well and is still
+rejected by the statement.
+
+The comparator asks two questions in order: average descending first, then
+name ascending as the tie-break.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -57,25 +88,43 @@ public static String[] topDepartments(String[] records, int n) {
 \end{lstlisting}
 
 \cost{$O(R + D\log D)$ for $R$ records and $D$ departments.}
-\trap{Four of them, and each one is a real submission killer.
-\texttt{split(",")} without \texttt{-1} silently drops trailing empty fields,
-so \texttt{"a,x,"} looks like a two-field record instead of an invalid
-three-field one. An \texttt{int} total overflows. Averaging averages is wrong
-whenever departments differ in size. And a negative salary parses perfectly
-well, so \texttt{parseInt} succeeding is not the same as the record being
-valid.}
+\trap{Four, and each one is a real submission killer. \texttt{split(",")}
+without \texttt{-1} drops trailing empty fields, so \texttt{"a,x,"} looks like
+a two-field record instead of an invalid three-field one. An \texttt{int}
+total overflows. Averaging averages is wrong. And a negative salary parses
+fine.}
 \alsoknown{Task 2 of the assessment.}
 
 % ------------------------------------------------------------------
 \problem{Filter and total transactions}{Medium}
 
-Records are \texttt{"id,category,amount"} with the amount in cents. Return the
-total per category, but only for categories whose total is at least a
-threshold, sorted by total descending.
+Records are \texttt{"id,category,amount"}. Return the total per category, but
+only for categories whose total reaches a threshold, sorted by total
+descending.
 
-\idea{One grouping pass, then filter, then sort. Doing the filter before the
-grouping is finished is the common error --- a category only crosses the
+\idea{Group fully, \emph{then} filter, then sort. A category only crosses the
 threshold once all its rows are in.}
+
+\begin{dia}
+  \node[soft, minimum width=22mm] at (0,0.8) {food : 40};
+  \node[soft, minimum width=22mm] at (0,0) {toys : 90};
+  \node[soft, minimum width=22mm] at (0,-0.8) {fuel : 55};
+  \node[note, anchor=east] at (-1.4,0) {totals};
+  \draw[edge, densely dashed] (-1.3,0.4) -- (6.0,0.4);
+  \node[note, anchor=west] at (6.2,0.4) {threshold 50};
+  \node[hot, minimum width=22mm] at (3.4,0.0) {toys : 90};
+  \node[hot, minimum width=22mm] at (3.4,-0.8) {fuel : 55};
+  \node[dead, minimum width=22mm] at (3.4,0.8) {food : 40};
+  \node[note] at (3.4,-1.5) {kept, sorted descending};
+\end{dia}
+
+\textbf{How it works.} The sequence is group, filter, sort --- in that order,
+and the order is the lesson. Filtering inside the parsing loop tests a
+partial total, so a category that would have qualified on its full total gets
+dropped the first time it is seen.
+
+\texttt{merge(key, value, Long::sum)} is the compact form of ``add to the
+running total, starting from this value if the key is new''.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -105,21 +154,42 @@ public static List<String> categoriesOver(String[] rows, long threshold) {
 \end{lstlisting}
 
 \cost{$O(R + C\log C)$.}
-\trap{Filtering inside the parsing loop. Also, \texttt{b.getValue().compareTo}
-on boxed \texttt{Long} is fine, but \texttt{(int)(b.getValue() -
-a.getValue())} is not --- the subtraction can overflow and the cast then
-reverses the order.}
+\trap{\texttt{(int)(b.getValue() - a.getValue())} as the comparator. The
+subtraction overflows on large totals and the cast then reverses the order.
+Use \texttt{compareTo} or \texttt{Long.compare}.}
 
 % ------------------------------------------------------------------
 \problem{Validate records and report the errors}{Medium}
 
-Given records \texttt{"id,email,age"}, return one message per invalid record in
-input order: \texttt{"line 3: bad age"}. A record is invalid if it has the
-wrong field count, an email with no \texttt{@}, or an age outside 0 to 150.
-Report only the first problem found in each record.
+Given \texttt{"id,email,age"}, return one message per invalid record in input
+order: \texttt{"line 3: bad age"}. Report only the first problem in each
+record.
 
-\idea{A validation ladder: check in a fixed order and return the first failure.
-Keep the line number from the loop index, counting from 1.}
+\idea{A validation ladder: check in a fixed order and return the first
+failure.}
+
+\begin{dia}
+  \node[soft, minimum width=24mm] (c1) at (0,0) {3 fields?};
+  \node[soft, minimum width=24mm] (c2) at (3.2,0) {email has @?};
+  \node[soft, minimum width=24mm] (c3) at (6.4,0) {age 0--150?};
+  \node[cool, minimum width=18mm] (ok) at (9.2,0) {valid};
+  \draw[flow] (c1) -- (c2); \draw[flow] (c2) -- (c3); \draw[flow] (c3) -- (ok);
+  \node[hot, minimum width=30mm] at (0,-1.3) {"wrong field count"};
+  \node[hot, minimum width=24mm] at (3.2,-1.3) {"bad email"};
+  \node[hot, minimum width=20mm] at (6.4,-1.3) {"bad age"};
+  \draw[flow] (0,-0.3) -- (0,-1.0);
+  \draw[flow] (3.2,-0.3) -- (3.2,-1.0);
+  \draw[flow] (6.4,-0.3) -- (6.4,-1.0);
+\end{dia}
+
+\textbf{How it works.} Each check is a gate: pass and fall through to the
+next, fail and return immediately with that message. Returning on the first
+failure is what gives ``only the first problem per record'', and putting the
+field-count check first is what stops the later checks from indexing past the
+end of the array.
+
+Splitting the per-record logic into its own method keeps the loop trivial and
+the line numbering in one place.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -147,19 +217,41 @@ private static String firstProblem(String row) {
 
 \cost{$O(R)$.}
 \trap{Line numbers are one-based in every message format anyone asks for, and
-the loop index is zero-based. Off by one here fails every test at once, which
-at least makes it easy to spot.}
+the loop index is zero-based. At least this one fails every test at once,
+which makes it easy to spot.}
 
 % ------------------------------------------------------------------
 \problem{Join two datasets on a key}{Medium}
 
-One array holds \texttt{"userId,name"}, another holds
-\texttt{"userId,orderTotal"}. Return \texttt{"name:total"} for every user
-present in both, summing a user's orders, sorted by total descending.
+One array holds \texttt{"userId,name"}, another \texttt{"userId,orderTotal"}.
+Return \texttt{"name:total"} for every user present in both, summing each
+user's orders, sorted by total descending.
 
 \idea{Index the smaller side into a map, then stream the larger side against
-it. This is a hash join, and it is $O(n+m)$ where the nested-loop version is
-$O(nm)$.}
+it. A hash join: $O(n+m)$ where the nested loop is $O(nm)$.}
+
+\begin{dia}
+  \node[cell, minimum width=26mm] at (0,0.8) {u1, Ada};
+  \node[cell, minimum width=26mm] at (0,0) {u2, Bob};
+  \node[note, anchor=east] at (-1.5,0.4) {users};
+  \node[cell, minimum width=26mm] at (3.6,1.2) {u1, 30};
+  \node[cell, minimum width=26mm] at (3.6,0.4) {u1, 20};
+  \node[dead, minimum width=26mm] at (3.6,-0.4) {u9, 99};
+  \node[note, anchor=east] at (2.1,0.4) {orders};
+  \node[hot, minimum width=22mm] at (7.2,0.8) {Ada : 50};
+  \node[dead, minimum width=22mm] at (7.2,-0.4) {u9 dropped};
+  \draw[flow] (5.0,0.8) -- (6.0,0.8);
+  \caplabel{7.2}{-1.1}{inner join: no user, no row};
+\end{dia}
+
+\textbf{How it works.} The map turns ``does this user exist'' from a scan of
+the users array into one constant-time lookup, which is the entire saving. The
+second map accumulates each user's order total as the rows stream past.
+
+The part worth pausing on is which join you were asked for. This one drops
+orders with no matching user \emph{and} users with no orders. A left join
+would keep every user, with a total of zero. They give different answers, and
+the statement will tell you which --- read it before you write.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -191,21 +283,44 @@ public static List<String> join(String[] users, String[] orders) {
 \end{lstlisting}
 
 \cost{$O(n+m)$ plus the sort.}
-\trap{Deciding what kind of join you were asked for. This one drops users
-with no orders and orders with no user. A left join would keep every user
-with a total of zero --- a different answer, and the statement will say
-which.}
+\trap{Writing the nested loop. It is correct and it is quadratic; on $10^5$
+rows each side it will not finish.}
 
 % ------------------------------------------------------------------
 \problem{Bucket events by hour and find the peak}{Medium}
 
-Each record is \texttt{"eventId,timestampSeconds"}. Count the events falling in
-each hour and return the busiest hour as an hour index, breaking ties by the
-earlier hour.
+Records are \texttt{"eventId,timestampSeconds"}. Count the events in each hour
+and return the busiest hour index, breaking ties by the earlier hour.
 
-\idea{The bucket key is \texttt{timestamp / 3600} --- integer division is the
-bucketing. Then a single scan for the maximum, taking \texttt{>} and not
-\texttt{>=} so the earliest hour wins a tie.}
+\idea{The bucket key is \texttt{timestamp / 3600} --- integer division
+\emph{is} the bucketing. Then one scan for the maximum.}
+
+\begin{dia}
+  \draw[edge] (0,0) -- (7.2,0);
+  \foreach \x/\lab in {0/0, 1.8/3600, 3.6/7200, 5.4/10800, 7.2/14400} {
+    \draw[edge] (\x,-0.1) -- (\x,0.1);
+    \node[idx] at (\x,-0.42) {\lab};}
+  \fill[dsoft] (0.05,0.1) rectangle (1.75,0.6);
+  \fill[dhot] (1.85,0.1) rectangle (3.55,1.3);
+  \fill[dsoft] (3.65,0.1) rectangle (5.35,0.45);
+  \node[note] at (0.9,0.85) {2};
+  \node[note] at (2.7,1.55) {5};
+  \node[note] at (4.5,0.7) {1};
+  \node[note] at (0.9,-0.95) {hour 0};
+  \node[note] at (2.7,-0.95) {hour 1};
+  \node[note] at (4.5,-0.95) {hour 2};
+  \caplabel{2.7}{-1.5}{busiest hour is 1};
+\end{dia}
+
+\textbf{How it works.} Bucketing by hour is just integer division: every
+timestamp in $[3600h, 3600(h+1))$ maps to $h$, and the truncation does it for
+free.
+
+The scan for the maximum needs its tie-break written out explicitly. The
+second clause, \texttt{e.getValue() == bestCount \&\& e.getKey() < bestHour},
+is what makes the earlier hour win. Relying on iteration order instead would
+be a bug: \texttt{HashMap} order is unspecified and changes with the keys, so
+the answer would vary with the input.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -235,9 +350,8 @@ public static long busiestHour(String[] events) {
 \end{lstlisting}
 
 \cost{$O(R)$.}
-\trap{Relying on iteration order to settle ties. \texttt{HashMap} order is
-unspecified and changes with the keys, so the tie-break has to be written
-out explicitly, as in the second clause above.}
+\trap{Trusting \texttt{HashMap} iteration order for the tie-break. The tests
+that catch this are the ones with two equally busy hours.}
 
 % ------------------------------------------------------------------
 \problem{Running balance per account}{Medium}
@@ -245,9 +359,32 @@ out explicitly, as in the second clause above.}
 Transactions arrive as \texttt{"account,amount"} in chronological order.
 Return, for each account, the lowest balance it ever reached.
 
-\idea{One pass with two maps, or one map of a small array. Update the running
-balance, then compare it to the stored minimum --- in that order, because the
-minimum has to include the transaction you just applied.}
+\idea{One pass, two maps. Update the running balance, \emph{then} compare it
+to the stored minimum.}
+
+\begin{dia}
+  \draw[edge] (0,0) -- (5.6,0);
+  \draw[flow, draw=accent, line width=1pt]
+    (0,0.7) -- (1.4,1.1) -- (2.8,-0.5) -- (4.2,-0.2) -- (5.6,0.6);
+  \foreach \x/\y in {0/0.7, 1.4/1.1, 2.8/-0.5, 4.2/-0.2, 5.6/0.6} {
+    \fill[accent] (\x,\y) circle (1.6pt);}
+  \node[hot] at (2.8,-0.5) {};
+  \fill[accent] (2.8,-0.5) circle (1.6pt);
+  \node[note, anchor=west] at (3.1,-0.75) {lowest point};
+  \node[idx, anchor=east] at (-0.15,0) {0};
+  \node[note, anchor=west] at (5.9,0.6) {balance};
+  \node[note] at (2.8,-1.3) {time};
+\end{dia}
+
+\textbf{How it works.} The order of the two updates is the whole problem.
+Apply the transaction to the running balance first, then offer that new
+balance to the minimum. Comparing before applying would miss a dip caused by
+the transaction you are currently processing.
+
+\texttt{merge(account, now, Math::min)} does the right thing on the first
+transaction too: with no prior value it simply stores \texttt{now}. That is
+why the minimum is not seeded at zero --- an account that only ever receives
+money has its first deposit as its lowest balance, not 0.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -272,7 +409,5 @@ public static Map<String,Long> lowestBalances(String[] transactions) {
 \end{lstlisting}
 
 \cost{$O(R)$ time, $O(A)$ space for $A$ accounts.}
-\trap{Seeding the minimum at \texttt{0} for every account. If an account only
-ever receives money its lowest balance is its first deposit, not zero --- and
-\texttt{merge} with no prior value stores the first balance, which is exactly
-right.}
+\trap{Seeding the minimum at 0 for every account, which silently caps every
+answer at zero or below.}

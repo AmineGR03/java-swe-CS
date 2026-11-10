@@ -1,4 +1,4 @@
-\chapterpage{Recursion, BFS and DFS}{Seven problems. Recursion is fine for
+\chapterpage{Recursion, BFS and DFS}{Seven problems. Recursion is fine on
 trees, where depth is logarithmic. On grids, use an explicit queue --- depth
 there is measured in tens of thousands.}
 
@@ -8,8 +8,33 @@ there is measured in tens of thousands.}
 Return the $n$th Fibonacci number. The point is the memo, not the formula.
 
 \idea{The naive recursion recomputes the same subproblems exponentially often.
-Cache each answer the first time you compute it. Better still, note that only
-two previous values are ever needed and drop the recursion entirely.}
+Cache each answer, or notice that only two previous values are ever needed and
+drop the recursion entirely.}
+
+\begin{dia}
+  \node[disc] (f5) at (3.0,0) {5};
+  \node[disc] (f4) at (1.8,-1.0) {4};
+  \node[disc] (f3a) at (4.2,-1.0) {3};
+  \node[disc] (f3b) at (0.9,-2.0) {3};
+  \node[disc] (f2a) at (2.6,-2.0) {2};
+  \node[hot] (f3c) at (4.2,-2.0) {3};
+  \draw[edge] (f5) -- (f4); \draw[edge] (f5) -- (f3a);
+  \draw[edge] (f4) -- (f3b); \draw[edge] (f4) -- (f2a);
+  \draw[back] (f3a) -- (f3c);
+  \node[note, anchor=west] at (4.9,-2.0) {already computed:};
+  \node[note, anchor=west] at (4.9,-2.5) {the memo returns it};
+  \node[note, anchor=east] at (0.2,-2.0) {recomputed};
+  \node[note, anchor=east] at (0.2,-2.5) {without a memo};
+\end{dia}
+
+\textbf{How it works.} The recursion tree branches twice at every level, so
+without a cache it does $O(2^n)$ work --- and most of it repeats the same
+handful of subproblems. A memo collapses the tree to a line: each value of
+$n$ is computed once, then looked up.
+
+The iterative version goes further. Since $F_n$ depends only on the two
+previous values, there is nothing to store beyond them, and the recursion
+disappears along with the stack it needed.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -35,18 +60,39 @@ public static long fibMemo(int n, Map<Integer,Long> memo) {
 }
 \end{lstlisting}
 
-\cost{Iterative: $O(n)$ time, $O(1)$ space. Memoised: $O(n)$ both.}
+\cost{Iterative: $O(n)$ time, $O(1)$ space. Memoised: $O(n)$ both, plus the
+call stack.}
 \trap{\texttt{int} overflows at \texttt{fib(47)}. If the statement does not
-bound $n$, use \texttt{long} and say so.}
+bound $n$, use \texttt{long} and say so out loud.}
 
 % ------------------------------------------------------------------
 \problem{Maximum depth of a binary tree}{Easy}
 
 Return the number of nodes on the longest root-to-leaf path.
 
-\idea{The depth of a node is one more than the deeper of its two subtrees. This
-is the template every tree recursion follows: base case for \texttt{null},
-combine the children.}
+\idea{The depth of a node is one more than the deeper of its two subtrees.}
+
+\begin{dia}
+  \node[disc] (r) at (2.4,0) {3};
+  \node[disc] (l) at (1.2,-1.0) {9};
+  \node[disc] (rr) at (3.6,-1.0) {20};
+  \node[disc] (a) at (3.0,-2.0) {15};
+  \node[disc] (b) at (4.2,-2.0) {7};
+  \draw[edge] (r) -- (l); \draw[edge] (r) -- (rr);
+  \draw[edge] (rr) -- (a); \draw[edge] (rr) -- (b);
+  \node[note, anchor=east] at (0.5,0) {depth 3};
+  \node[note, anchor=east] at (0.5,-1.0) {depth 2};
+  \node[note, anchor=east] at (0.5,-2.0) {depth 1};
+  \node[note, anchor=west] at (5.0,-1.0) {$1 + \max(1, 2) = 3$};
+\end{dia}
+
+\textbf{How it works.} This is the template every tree recursion follows, and
+it has exactly two parts. The base case answers for the empty tree:
+\texttt{null} has depth 0. The recursive case combines the answers from the
+children --- here by taking the larger and adding one for the current node.
+
+Returning 0 rather than 1 for \texttt{null} is what makes a leaf come out at
+depth 1 rather than 2.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -61,9 +107,9 @@ public static int maxDepth(Node root) {
 }
 \end{lstlisting}
 
-\cost{$O(n)$ time, $O(h)$ stack for height $h$.}
-\trap{Returning \texttt{1} rather than \texttt{0} for a \texttt{null} node
-counts a missing child as a level and gives every leaf a depth of 2.}
+\cost{$O(n)$ time, $O(h)$ stack for height $h$ --- $O(\log n)$ balanced,
+$O(n)$ for a degenerate chain.}
+\trap{Returning 1 for \texttt{null}, which counts a missing child as a level.}
 
 % ------------------------------------------------------------------
 \problem{Level-order traversal}{Medium}
@@ -71,8 +117,29 @@ counts a missing child as a level and gives every leaf a depth of 2.}
 Return the node values grouped by depth, top level first.
 
 \idea{BFS with a queue, taking a whole level at a time: record the queue size
-before the loop, then pop exactly that many nodes. That snapshot is what
-separates one level from the next.}
+\emph{before} the loop, then pop exactly that many nodes.}
+
+\begin{dia}
+  \node[disc] (r) at (1.6,0) {3};
+  \node[disc] (l) at (0.8,-1.0) {9};
+  \node[disc] (rr) at (2.4,-1.0) {20};
+  \draw[edge] (r) -- (l); \draw[edge] (r) -- (rr);
+  \node[note, anchor=east] at (-0.2,0) {level 0};
+  \node[note, anchor=east] at (-0.2,-1.0) {level 1};
+  \node[soft, minimum width=9mm] at (4.4,0) {3};
+  \node[note, anchor=west] at (5.0,0) {size = 1, pop 1};
+  \node[soft, minimum width=9mm] at (4.4,-1.0) {9};
+  \node[soft, minimum width=9mm] at (5.3,-1.0) {20};
+  \node[note, anchor=west] at (5.9,-1.0) {size = 2, pop 2};
+  \node[note, anchor=east] at (3.7,0.7) {queue};
+\end{dia}
+
+\textbf{How it works.} A plain BFS visits the nodes in level order but gives
+you no way to tell where one level ends. The snapshot does: at the top of each
+iteration the queue contains exactly the current level and nothing else, so
+its size is that level's width. Popping precisely that many nodes --- while
+pushing their children behind them --- consumes one level and leaves the queue
+holding exactly the next.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -97,18 +164,44 @@ public static List<List<Integer>> levelOrder(Node root) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(w)$ space for the widest level $w$.}
-\trap{Writing \texttt{for (int i = 0; i < queue.size(); i++)} re-evaluates the
-size as children are added, so levels bleed into each other. Take the
-snapshot into a variable.}
+\trap{\texttt{for (int i = 0; i < queue.size(); i++)} re-evaluates the size as
+children are added, so levels bleed into one another. Take the snapshot into a
+variable.}
 
 % ------------------------------------------------------------------
 \problem{Flood fill}{Easy}
 
-Starting at a pixel, repaint it and every same-coloured pixel connected to it
-(four-way) with a new colour.
+Repaint a pixel and every same-coloured pixel connected to it, four-way.
 
 \idea{BFS from the start pixel. Guard against the new colour equalling the old
 one, or the fill never terminates.}
+
+\begin{dia}
+  \foreach \r in {0,1,2} {
+    \foreach \c in {0,1,2,3} {
+      \node[cell] at (\c*0.8,-\r*0.8) {1};}}
+  \node[cell] at (2.4,0) {0};
+  \node[cell] at (2.4,-0.8) {0};
+  \node[hot] at (0.8,-0.8) {2};
+  \node[soft] at (0,-0.8) {1};
+  \node[soft] at (0.8,0) {1};
+  \node[soft] at (1.6,-0.8) {1};
+  \node[soft] at (0.8,-1.6) {1};
+  \draw[flow] (0.8,-0.8) -- (0.35,-0.8);
+  \draw[flow] (0.8,-0.8) -- (0.8,-0.35);
+  \draw[flow] (0.8,-0.8) -- (1.25,-0.8);
+  \draw[flow] (0.8,-0.8) -- (0.8,-1.25);
+  \node[note, anchor=west] at (3.4,-0.8) {start, repainted};
+  \node[note, anchor=west] at (3.4,-1.35) {then its four neighbours};
+\end{dia}
+
+\textbf{How it works.} Identical in shape to counting islands: a queue, four
+offsets, mark on push. The one addition is the guard at the top.
+
+If the new colour equals the old one, then repainting a cell leaves it still
+matching the target, so it qualifies to be enqueued again --- by every
+neighbour, forever. The early return costs one comparison and removes an
+infinite loop.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -135,19 +228,44 @@ public static int[][] floodFill(int[][] image, int sr, int sc, int colour) {
 }
 \end{lstlisting}
 
-\cost{$O(\text{rows}\times\text{cols})$.}
-\trap{Without the \texttt{old == colour} early return, every repainted cell
-still matches the target colour, so it is enqueued again forever.}
+\cost{$O(\text{rows}\times\text{cols})$ time and space.}
+\trap{Omitting the \texttt{old == colour} guard. It only hangs when the caller
+repaints with the colour already there, which is exactly the test case a
+grader includes.}
 \alsoknown{The engine behind Task 3 of the assessment.}
 
 % ------------------------------------------------------------------
 \problem{All permutations of a string}{Medium}
 
-Return every ordering of the characters. For $n$ characters there are $n!$ of
-them, so this is only ever asked for small inputs.
+Return every ordering of the characters. There are $n!$, so this is only ever
+asked for small inputs.
 
-\idea{Backtracking. Choose an unused character, recurse, then put it back. The
-``put it back'' line is what makes it explore every branch rather than one.}
+\idea{Backtracking. Choose an unused character, recurse, then put it back.}
+
+\begin{dia}
+  \node[soft, minimum width=10mm] (root) at (3.0,0) {--};
+  \node[cell, minimum width=10mm] (a) at (1.2,-1.0) {a};
+  \node[cell, minimum width=10mm] (b) at (3.0,-1.0) {b};
+  \node[cell, minimum width=10mm] (c) at (4.8,-1.0) {c};
+  \node[cell, minimum width=12mm] (ab) at (0.4,-2.0) {ab};
+  \node[cell, minimum width=12mm] (ac) at (2.0,-2.0) {ac};
+  \node[hot, minimum width=14mm] (abc) at (0.4,-3.0) {abc};
+  \draw[edge] (root) -- (a); \draw[edge] (root) -- (b); \draw[edge] (root) -- (c);
+  \draw[edge] (a) -- (ab); \draw[edge] (a) -- (ac);
+  \draw[edge] (ab) -- (abc);
+  \node[note, anchor=west] at (3.2,-2.6) {at full length, record};
+  \node[note, anchor=west] at (3.2,-3.1) {then undo and try the next};
+\end{dia}
+
+\textbf{How it works.} The search walks down the tree making a choice at each
+level, and when the current string reaches full length it records a
+permutation. The two \texttt{undo} lines at the bottom of the loop are what
+let it walk back \emph{up} and explore a different branch.
+
+Both the \texttt{StringBuilder} and the \texttt{used} array are shared across
+the entire search --- there is only one of each. That is why every change must
+be reversed on the way out: whatever state a branch leaves behind, the next
+branch inherits.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -177,18 +295,40 @@ private static void build(char[] chars, boolean[] used,
 \end{lstlisting}
 
 \cost{$O(n \cdot n!)$ time.}
-\trap{Forgetting either undo. The \texttt{StringBuilder} and the
-\texttt{used} array are shared across the whole search, so every change must
-be reversed on the way out.}
+\trap{Forgetting either undo. You get a fraction of the permutations, or
+garbage, and the output is long enough that the bug is hard to spot by eye.}
 
 % ------------------------------------------------------------------
 \problem{All subsets}{Medium}
 
 Return every subset of a set of distinct numbers --- $2^n$ of them.
 
-\idea{Each element is either in or out, so the subsets map one-to-one onto the
-binary numbers from $0$ to $2^n - 1$. Bit $i$ set means element $i$ is
-included. No recursion needed.}
+\idea{Each element is either in or out, so the subsets correspond exactly to
+the binary numbers from $0$ to $2^n-1$. No recursion needed.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.4,0.9) {mask};
+  \node[note, anchor=east] at (-0.4,0) {bits};
+  \node[note, anchor=east] at (-0.4,-0.9) {subset};
+  \foreach \m/\x in {0/0, 1/1.5, 2/3.0, 3/4.5} {
+    \node[note] at (\x,0.9) {\m};}
+  \cellrowst{b0}{0}{cell/0,cell/0}
+  \node[note] at (0.4,-0.9) {\{\}};
+  \node[cell] at (1.5,0) {0}; \node[hot] at (2.3,0) {1};
+  \node[note] at (1.9,-0.9) {\{a\}};
+  \node[hot] at (3.0,0) {1}; \node[cell] at (3.8,0) {0};
+  \node[note] at (3.4,-0.9) {\{b\}};
+  \node[hot] at (4.5,0) {1}; \node[hot] at (5.3,0) {1};
+  \node[note] at (4.9,-0.9) {\{a,b\}};
+\end{dia}
+
+\textbf{How it works.} Counting from 0 to $2^n - 1$ enumerates every possible
+combination of in/out decisions exactly once, with no bookkeeping. Bit $i$ of
+the counter says whether element $i$ is included, and
+\texttt{(mask \& (1 << i)) != 0} tests it.
+
+This is shorter and faster than the recursive version, and there is no undo
+step to forget.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -206,18 +346,44 @@ public static List<List<Integer>> subsets(int[] a) {
 \end{lstlisting}
 
 \cost{$O(n \cdot 2^n)$ time.}
-\trap{\texttt{1 << a.length} overflows once the array has 31 elements. That
-is academic here --- $2^{31}$ subsets would not fit in memory anyway --- but
-the shift is the thing that breaks first.}
+\trap{\texttt{1 << a.length} overflows once the array reaches 31 elements.
+Academic here --- $2^{31}$ subsets would not fit in memory --- but the shift
+is what breaks first.}
 
 % ------------------------------------------------------------------
 \problem{Shortest path in a grid with obstacles}{Medium}
 
-Cells are open (\texttt{0}) or blocked (\texttt{1}). Return the fewest steps
-from the top-left to the bottom-right, moving four-way, or $-1$.
+Cells are open (\texttt{0}) or blocked (\texttt{1}). Fewest steps from the
+top-left to the bottom-right, four-way, or $-1$.
 
-\idea{BFS, not DFS. On an unweighted graph BFS reaches every cell by a shortest
-path, so the first time you arrive at the target you are done.}
+\idea{BFS, not DFS. On an unweighted graph BFS reaches every cell by a
+shortest path, so the first arrival at the target is the answer.}
+
+\begin{dia}
+  \foreach \r in {0,1,2} {
+    \foreach \c in {0,1,2,3} {
+      \node[cell] at (\c*0.8,-\r*0.8) {};}}
+  \node[dead] at (1.6,0) {1};
+  \node[dead] at (1.6,-0.8) {1};
+  \node[soft] at (0,0) {S};
+  \node[hot] at (2.4,-1.6) {E};
+  \draw[flow] (0,-0.25) -- (0,-1.35);
+  \draw[flow] (0.25,-1.6) -- (2.15,-1.6);
+  \node[note, anchor=west] at (3.4,-0.4) {wall forces the detour};
+  \node[note, anchor=west] at (3.4,-1.2) {5 steps, found by BFS};
+\end{dia}
+
+\textbf{How it works.} BFS expands in rings: everything one step away, then
+everything two steps away, and so on. So the first time the target is
+dequeued, no shorter route to it exists --- that is a property of the
+traversal order, not something the code has to check.
+
+Counting the steps uses the same level-snapshot trick as the tree traversal:
+each pass of the outer loop consumes one ring and increments the distance.
+
+DFS would also find \emph{a} path, but not the shortest, and people reach for
+it because recursion is quicker to type. If the question says shortest and the
+edges are unweighted, it is BFS.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -253,6 +419,6 @@ public static int shortestPath(int[][] grid) {
 \end{lstlisting}
 
 \cost{$O(\text{rows}\times\text{cols})$ time and space.}
-\trap{DFS finds \emph{a} path, not the shortest one, and people reach for it
-because recursion is quicker to type. If the question says shortest and the
-edges are unweighted, it is BFS.}
+\trap{Marking \texttt{seen} on pop rather than on push, which lets the same
+cell be queued by several neighbours. Same rule as every other grid search in
+this book.}

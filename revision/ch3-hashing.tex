@@ -1,17 +1,39 @@
-\chapterpage{Hashing and counting}{Eight problems. If a question asks about
-\emph{how many}, \emph{have I seen}, or \emph{group by}, the answer starts with
-a \texttt{HashMap}. The prefix-sum trick in P18 and P21 is the single highest
-value pattern in this book.}
+\chapterpage{Hashing and counting}{Eight problems. If a question asks
+\emph{how many}, \emph{have I seen}, or \emph{group by}, the answer starts
+with a \texttt{HashMap}. The prefix trick in P18 and P21 is the highest-value
+pattern in this book.}
 
 % ------------------------------------------------------------------
 \problem{Count pairs summing to a target}{Easy}
 
 Count the pairs of indices $i<j$ with \texttt{a[i] + a[j] == target}.
-\texttt{[1,5,7,1]} with target 6 gives 2.
 
 \idea{Walk once. For each element, the number of earlier elements that complete
-the pair is already in the map. Count first, then insert --- that ordering is
-what stops an element pairing with itself.}
+the pair is already in the map. Count first, then insert.}
+
+\begin{dia}
+  \cellrowst{a}{0}{dead/1,dead/5,dead/7,hot/1}
+  \idxrow{-0.62}{3}
+  \node[ptr] at (2.4,0.78) {x = 1};
+  \draw[flow] (2.4,0.62) -- (2.4,0.44);
+  \node[note, anchor=west] at (3.3,0.35) {target 6, so look up $6-1=5$};
+  \node[note, anchor=west] at (3.3,-0.2) {map says \texttt{5} seen once};
+  \node[note, anchor=west] at (3.3,-0.75) {$\Rightarrow$ one new pair};
+  \node[soft, minimum width=11mm] at (0.0,-1.8) {1:1};
+  \node[soft, minimum width=11mm] at (1.2,-1.8) {5:1};
+  \node[soft, minimum width=11mm] at (2.4,-1.8) {7:1};
+  \node[note, anchor=east] at (-0.7,-1.8) {map before};
+\end{dia}
+
+\textbf{How it works.} Every pair has a later element and an earlier one. If
+you always count from the point of view of the later element, each pair is
+counted exactly once --- no division by two, no double counting.
+
+That is why the order of the two statements matters. Looking up the
+complement \emph{before} inserting the current value means the map holds only
+elements strictly to the left. Insert first and an element can pair with
+itself: a single \texttt{3} with target 6 would report a pair that does not
+exist.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -28,27 +50,61 @@ public static long countPairs(int[] a, int target) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(n)$ space.}
-\trap{Inserting before counting makes \texttt{[3]} with target 6 report one
-pair. And the count can exceed \texttt{int} on a large array of equal values:
-$n = 200\,000$ identical elements is about $2\times10^{10}$ pairs.}
+\trap{Returning \texttt{int}. With $200\,000$ identical elements the count is
+about $2\times10^{10}$, which overflows.}
 
 % ------------------------------------------------------------------
 \problem{Longest subarray with equal counts}{Medium}
 
 Return the length of the longest contiguous subarray holding as many even
-numbers as odd ones. \texttt{[1,2,3,4,5]} gives 4.
+numbers as odd ones.
 
 \idea{Turn it into a running balance: $+1$ for odd, $-1$ for even. A subarray is
-balanced exactly when the balance at its two ends is equal. So record, for
-each balance value, the \emph{earliest} index where it appeared; the longest
-span to a repeat of that value is the answer.}
+balanced exactly when the balance at its two ends is equal.}
+
+\begin{dia}
+  \draw[edge] (0,0) -- (5.4,0);
+  \node[idx, anchor=east] at (-0.15,0) {0};
+  \node[idx, anchor=east] at (-0.15,0.55) {1};
+  \node[idx, anchor=east] at (-0.15,1.1) {2};
+  \draw[edge, densely dotted] (0,0.55) -- (5.4,0.55);
+  \draw[flow, draw=accent, line width=1pt]
+    (0,0) -- (0.6,0.55) -- (1.2,0) -- (1.8,0.55) -- (2.4,0) -- (3.0,0.55);
+  \foreach \x/\y in {0/0, 0.6/0.55, 1.2/0, 1.8/0.55, 2.4/0, 3.0/0.55} {
+    \fill[accent] (\x,\y) circle (1.6pt);}
+  \node[idx] at (0,-0.35) {$-1$};
+  \node[idx] at (0.6,-0.35) {0};
+  \node[idx] at (1.2,-0.35) {1};
+  \node[idx] at (1.8,-0.35) {2};
+  \node[idx] at (2.4,-0.35) {3};
+  \node[idx] at (3.0,-0.35) {4};
+  \node[note, anchor=west] at (3.4,0.55) {index};
+  \draw[span] (0,-0.85) -- (2.4,-0.85);
+  \caplabel{1.2}{-1.35}{same balance at both ends $\Rightarrow$ length 4};
+  \node[note, anchor=west] at (3.4,0) {balance};
+\end{dia}
+
+\textbf{How it works.} Write $B_i$ for the balance after the first $i$
+elements. The subarray from $j+1$ to $i$ has as many odds as evens exactly
+when $B_i = B_j$, because the difference $B_i - B_j$ counts (odds $-$ evens)
+inside that window.
+
+So the problem becomes: for each balance value, how far apart are its two
+furthest occurrences? Since the balance is scanned left to right, you only
+ever need the \emph{earliest} index at which each value appeared --- any later
+repeat measured against it gives the longest span. Hence \texttt{putIfAbsent}
+semantics: write the index only when the value is new.
+
+The seed \texttt{firstIndex.put(0, -1)} represents the empty prefix. Without
+it, a subarray that is balanced from index 0 has no earlier index to measure
+against and is missed entirely.
 
 \solheading
 \begin{lstlisting}[style=java]
 public static int longestBalanced(int[] nums) {
     if (nums == null || nums.length == 0) return 0;
     Map<Integer,Integer> firstIndex = new HashMap<>();
-    firstIndex.put(0, -1);                 // empty prefix
+    firstIndex.put(0, -1);                 // the empty prefix
     int balance = 0, best = 0;
     for (int i = 0; i < nums.length; i++) {
         balance += (nums[i] % 2 != 0) ? 1 : -1;
@@ -62,9 +118,9 @@ public static int longestBalanced(int[] nums) {
 
 \cost{$O(n)$ time, $O(n)$ space.}
 \trap{Three in one problem. Overwriting the stored index on a repeat measures
-the \emph{shortest} span. Omitting the \texttt{0 -> -1} seed loses every answer
-that starts at index 0. And \texttt{nums[i] \% 2 == 1} is false for $-3$.}
-\alsoknown{Task 4 of the assessment; and, with 0 and 1 in place of even and
+the shortest span. Omitting the \texttt{0 -> -1} seed loses answers starting
+at index 0. And \texttt{nums[i] \% 2 == 1} is false for $-3$.}
+\alsoknown{Task 4 of the assessment; and with 0 and 1 in place of even and
 odd, the classic ``contiguous array'' question.}
 
 % ------------------------------------------------------------------
@@ -75,8 +131,33 @@ Group the words that are anagrams of one another.
 \noindent\texttt{["eat","tea","tan","ate"]} gives
 \texttt{[[eat,tea,ate],[tan]]}.
 
-\idea{Give every word a canonical key that all its anagrams share. Sorting the
-letters is the obvious one; a 26-slot count rendered as a string is faster.}
+\idea{Give every word a canonical key that all its anagrams share. Sorting its
+letters is the simplest such key.}
+
+\begin{dia}
+  \node[cell, minimum width=13mm] (w1) at (0,1.2) {eat};
+  \node[cell, minimum width=13mm] (w2) at (0,0.5) {tea};
+  \node[cell, minimum width=13mm] (w3) at (0,-0.2) {tan};
+  \node[cell, minimum width=13mm] (w4) at (0,-0.9) {ate};
+  \node[soft, minimum width=14mm] (k1) at (2.6,0.85) {aet};
+  \node[soft, minimum width=14mm] (k2) at (2.6,-0.55) {ant};
+  \node[note] at (2.6,1.5) {sorted key};
+  \node[hot, minimum width=30mm] (g1) at (5.6,0.85) {eat, tea, ate};
+  \node[hot, minimum width=30mm] (g2) at (5.6,-0.55) {tan};
+  \draw[flow] (w1) -- (k1); \draw[flow] (w2) -- (k1); \draw[flow] (w4) -- (k1);
+  \draw[flow] (w3) -- (k2);
+  \draw[flow] (k1) -- (g1); \draw[flow] (k2) -- (g2);
+\end{dia}
+
+\textbf{How it works.} Two words are anagrams precisely when they have the
+same multiset of letters. A multiset has no natural identity in Java, so you
+manufacture one: sort the letters and the result is identical for all members
+of a group and different for everything else. That string becomes the map
+key, and \texttt{computeIfAbsent} does the grouping in one line.
+
+A 26-slot count rendered as a string is a faster key --- it drops the
+$\log k$ sorting factor --- but sorting is shorter to write and almost always
+fast enough.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -92,18 +173,44 @@ public static List<List<String>> groupAnagrams(String[] words) {
 }
 \end{lstlisting}
 
-\cost{$O(n\,k\log k)$ for $n$ words of length $k$. The counting key makes it
-$O(nk)$.}
-\trap{Using the word's \texttt{hashCode} or its character \emph{sum} as the
-key. Both collide: \texttt{"ad"} and \texttt{"bc"} have the same letter sum.}
+\cost{$O(n\,k\log k)$ for $n$ words of length $k$.}
+\trap{Using the word's \texttt{hashCode} or the sum of its characters as the
+key. Both collide --- \texttt{"ad"} and \texttt{"bc"} have the same letter
+sum --- and the bug only shows on inputs you did not try.}
 
 % ------------------------------------------------------------------
 \problem{Top k frequent elements}{Medium}
 
 Return the $k$ most frequent values, most frequent first.
 
-\idea{Count, then select. A heap of size $k$ keeps the selection at
-$O(n\log k)$; sorting the distinct values is simpler and usually fast enough.}
+\idea{Count, then select. A min-heap capped at size $k$ keeps the selection at
+$O(n\log k)$.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.6,0) {counts};
+  \node[soft, minimum width=12mm] at (0,0) {1:3};
+  \node[soft, minimum width=12mm] at (1.3,0) {2:2};
+  \node[soft, minimum width=12mm] at (2.6,0) {3:1};
+  \node[soft, minimum width=12mm] at (3.9,0) {4:5};
+  \node[note, anchor=east] at (-0.6,-1.4) {heap, $k=2$};
+  \node[hot, minimum width=12mm] (h1) at (0,-1.4) {2:2};
+  \node[hot, minimum width=12mm] (h2) at (1.3,-1.4) {4:5};
+  \node[dead, minimum width=12mm] (h3) at (2.9,-1.4) {3:1};
+  \node[note, anchor=west] at (3.6,-1.4) {evicted: smallest count};
+  \draw[back] (h1) -- (h3);
+  \caplabel{0.65}{-2.1}{the root of a min-heap is the \emph{least} frequent};
+\end{dia}
+
+\textbf{How it works.} Counting is the easy half. The selection is where the
+choice lies: sorting all distinct values is $O(d\log d)$, while a heap capped
+at $k$ is $O(d\log k)$ and, more importantly, needs only $k$ entries in
+memory --- which is what makes it work on a stream.
+
+The counter-intuitive part is that you keep the top $k$ with a \emph{min}-heap.
+Push everything; whenever the heap exceeds $k$, discard its root, which is the
+least frequent thing currently held. What survives is the $k$ most frequent.
+Because the root is the smallest, draining the heap yields ascending
+frequency, so the output array is filled backwards.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -123,22 +230,42 @@ public static int[] topKFrequent(int[] a, int k) {
 }
 \end{lstlisting}
 
-\cost{$O(n\log k)$ time, $O(n)$ space.}
-\trap{Java's \texttt{PriorityQueue} is a \emph{min}-heap. To keep the top $k$
-you push everything and evict the smallest, which is why the output has to be
-filled backwards. Reaching for a max-heap and polling $k$ times also works but
-costs $O(n\log n)$.}
+\cost{$O(n\log k)$ time, $O(n)$ space for the counts.}
+\trap{Filling the output forwards. The heap drains smallest-first, so a
+forward fill returns the $k$ most frequent in exactly the wrong order.}
 
 % ------------------------------------------------------------------
 \problem{Subarray sum equals k}{Medium}
 
-Count the contiguous subarrays whose elements sum to exactly $k$. Values may be
-negative.
+Count the contiguous subarrays summing to exactly $k$. Values may be negative.
 
-\idea{Prefix sums. The sum of the window $(j, i]$ is
-$\text{prefix}_i - \text{prefix}_j$, so a window sums to $k$ whenever an
-earlier prefix equals $\text{prefix}_i - k$. Count how many times each prefix
-has occurred.}
+\idea{Prefix sums. A window sums to $k$ whenever an earlier prefix equals the
+current prefix minus $k$.}
+
+\begin{dia}
+  \cellrowst{a}{0.9}{cell/1,cell/2,cell/3,cell/-2}
+  \node[note, anchor=east] at (-0.5,0.9) {input};
+  \cellrowst{p}{0}{soft/0,soft/1,soft/3,hot/6,soft/4}
+  \node[note, anchor=east] at (-0.5,0) {prefix};
+  \node[idx] at (-0.0,-0.55) {$\varnothing$};
+  \draw[span] (0.4,-1.0) -- (2.0,-1.0);
+  \caplabel{1.2}{-1.5}{$6-1=5$: the window summing to 5 is $2+3$};
+  \draw[back] (2.4,0.45) to[out=150,in=30] (0.8,0.45);
+\end{dia}
+
+\textbf{How it works.} Let $P_i$ be the sum of the first $i$ elements. The sum
+of the window $(j,i]$ is $P_i - P_j$. Asking for a window summing to $k$ is
+therefore asking: how many earlier prefixes equal $P_i - k$? Keep a map from
+prefix value to how many times it has occurred, and the answer accumulates in
+one pass.
+
+The map is seeded with $0 \mapsto 1$ for the empty prefix, which is what lets
+a window starting at index 0 be counted.
+
+It is worth knowing why a sliding window fails here. Windows work when
+growing the window can only increase the sum, so you can shrink from the left
+when you overshoot. Negative values destroy that monotonicity; prefix sums do
+not care.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -157,9 +284,8 @@ public static int subarraysSummingTo(int[] a, int k) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(n)$ space.}
-\trap{A sliding window does \emph{not} work here, because negative values mean
-growing the window can lower the sum. Sliding windows need monotonicity;
-prefix sums do not.}
+\trap{Reaching for a sliding window because the problem says ``contiguous''.
+Check for negative values first --- they are the tell.}
 
 % ------------------------------------------------------------------
 \problem{First duplicate}{Easy}
@@ -167,7 +293,27 @@ prefix sums do not.}
 Return the first value that appears twice, scanning left to right, or $-1$.
 
 \idea{A \texttt{HashSet}. \texttt{add} returns \texttt{false} when the element
-was already present, so the check and the insert are one call.}
+was already there, so the check and the insert are a single call.}
+
+\begin{dia}
+  \cellrowst{a}{0}{dead/2,dead/1,dead/3,hot/1,cell/5}
+  \idxrow{-0.62}{4}
+  \node[soft, minimum width=9mm] at (0,-1.5) {2};
+  \node[soft, minimum width=9mm] at (1.0,-1.5) {1};
+  \node[soft, minimum width=9mm] at (2.0,-1.5) {3};
+  \node[note, anchor=east] at (-0.5,-1.5) {set};
+  \draw[flow] (2.4,-0.95) -- (1.1,-1.15);
+  \caplabel{3.6}{-1.5}{\texttt{add(1)} returns false $\Rightarrow$ answer};
+\end{dia}
+
+\textbf{How it works.} \texttt{Set.add} is specified to return whether the set
+changed. That single boolean replaces a \texttt{contains} followed by an
+\texttt{add}, halving the number of hash lookups and removing the chance of
+writing one without the other.
+
+Be sure which question is being asked. This returns the value whose
+\emph{second} occurrence comes earliest. ``The duplicate whose first
+occurrence is earliest'' is a different answer and needs a second pass.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -179,18 +325,37 @@ public static int firstDuplicate(int[] a) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(n)$ space.}
-\trap{``First duplicate'' means the first value whose \emph{second} occurrence
-comes earliest, which is what this returns. If the question instead wants the
-duplicate whose first occurrence is earliest, that is a different answer and
-needs a second pass.}
+\trap{Misreading which ``first'' is wanted. Also, $-1$ as a sentinel is wrong
+if $-1$ can itself be a duplicate value --- return \texttt{Integer} and
+\texttt{null} if the statement allows negatives.}
 
 % ------------------------------------------------------------------
 \problem{Intersection of two arrays}{Easy}
 
 Return the values present in both arrays, each once.
 
-\idea{Put the smaller array in a set, then filter the larger one, moving each hit
-into a result set so duplicates collapse.}
+\idea{Put one array in a set, filter the other against it, and collect the hits
+into a second set so duplicates collapse.}
+
+\begin{dia}
+  \draw[edge, fill=dsoft, fill opacity=0.6] (0,0) circle (1.1);
+  \draw[edge, fill=dwarm, fill opacity=0.6] (1.5,0) circle (1.1);
+  \node[note] at (-0.55,0) {2, 9};
+  \node[note] at (0.75,0) {4, 5};
+  \node[note] at (2.05,0) {7};
+  \node[note] at (-0.55,1.3) {a};
+  \node[note] at (2.05,1.3) {b};
+  \node[note, anchor=west] at (3.2,0) {result: \texttt{[4, 5]}};
+\end{dia}
+
+\textbf{How it works.} The first set turns ``is this value in \texttt{a}'' from
+a scan into an $O(1)$ question, which is the whole saving over the nested
+loop. The second set exists for a different reason: if \texttt{b} contains a
+shared value twice, a plain list would emit it twice.
+
+\texttt{LinkedHashSet} is used rather than \texttt{HashSet} so the output
+order is the order of first appearance in \texttt{b}. Plain \texttt{HashSet}
+leaves the order unspecified, and graders usually compare arrays exactly.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -207,20 +372,41 @@ public static int[] intersection(int[] a, int[] b) {
 \end{lstlisting}
 
 \cost{$O(n+m)$ time, $O(n)$ space.}
-\trap{Collecting into a \texttt{List} gives duplicates when \texttt{b} repeats
-a shared value. \texttt{LinkedHashSet} also fixes the output order, which
-plain \texttt{HashSet} leaves unspecified --- graders often compare arrays
-exactly.}
+\trap{Collecting into a \texttt{List}, which repeats values that recur in
+\texttt{b}.}
 
 % ------------------------------------------------------------------
 \problem{Isomorphic strings}{Medium}
 
-Two strings are isomorphic if the characters of one can be mapped to the
-characters of the other consistently and one-to-one. \texttt{"egg"} and
-\texttt{"add"} are; \texttt{"foo"} and \texttt{"bar"} are not.
+Two strings are isomorphic if the characters of one map onto the characters of
+the other consistently and one-to-one. \texttt{"egg"} and \texttt{"add"} are;
+\texttt{"foo"} and \texttt{"bar"} are not.
 
-\idea{Two maps, one in each direction. A single map allows two different
-characters to map onto the same target, which breaks one-to-one.}
+\idea{Two maps, one in each direction. One map alone permits two different
+characters to land on the same target.}
+
+\begin{dia}
+  \node[cell] (e1) at (0,0.5) {f};
+  \node[cell] (e2) at (0.8,0.5) {o};
+  \node[cell] (e3) at (1.6,0.5) {o};
+  \node[cell] (a1) at (0,-1.1) {b};
+  \node[cell] (a2) at (0.8,-1.1) {a};
+  \node[hot]  (a3) at (1.6,-1.1) {r};
+  \draw[flow] (e1) -- (a1);
+  \draw[flow] (e2) -- (a2);
+  \draw[flow] (e3) -- (a3);
+  \node[note, anchor=west] at (2.4,-0.3) {\texttt{o} already maps to \texttt{a},};
+  \node[note, anchor=west] at (2.4,-0.8) {so \texttt{o}$\to$\texttt{r} contradicts it};
+\end{dia}
+
+\textbf{How it works.} Consistency in one direction says: the same source
+character always produces the same target. One-to-one adds the reverse: no two
+source characters share a target. \texttt{"ab"} and \texttt{"cc"} satisfies
+the first and fails the second, which is why a single map is not enough.
+
+\texttt{putIfAbsent} is doing double duty: it records the mapping if it is new
+and returns the existing one if it is not, so the check and the write are one
+call per direction.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -240,6 +426,5 @@ public static boolean isIsomorphic(String s, String t) {
 
 \cost{$O(n)$ time, $O(1)$ space for a bounded alphabet.}
 \trap{Comparing the boxed \texttt{Character} values with \texttt{!=} works here
-only because the cache covers ASCII. Make it a habit to unbox or use
-\texttt{.equals} --- the same code with \texttt{Integer} keys above 127 would
-silently fail.}
+only because the cache covers ASCII. With \texttt{Integer} keys above 127 the
+identical code fails silently --- make unboxing a habit.}

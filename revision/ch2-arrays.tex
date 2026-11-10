@@ -1,15 +1,38 @@
-\chapterpage{Arrays and two pointers}{Eight problems. The two-pointer idea --- a
-read index and a write index, or two ends closing in --- turns a great many
-quadratic solutions linear.}
+\chapterpage{Arrays and two pointers}{Eight problems. A read index and a write
+index, or two ends closing in --- this one idea turns a great many quadratic
+solutions linear.}
 
 % ------------------------------------------------------------------
 \problem{Move zeros to the end}{Easy}
 
-Move every zero to the end of the array, keeping the order of the non-zero
-elements. Do it in place. \texttt{[0,1,0,3,12]} becomes \texttt{[1,3,12,0,0]}.
+Move every zero to the end, keeping the order of the non-zero elements, in
+place.
 
 \idea{A write pointer. Copy every non-zero forward to the write position, then
 fill the tail with zeros.}
+
+\begin{dia}
+  \cellrowst{a}{0}{dead/0,soft/1,dead/0,soft/3,soft/12}
+  \idxrow{-0.62}{4}
+  \node[ptr] at (0.8,0.78) {write};
+  \node[ptr] at (2.4,0.78) {read};
+  \draw[flow] (0.8,0.62) -- (0.8,0.44);
+  \draw[flow] (2.4,0.62) -- (2.4,0.44);
+  \draw[flow] (2.4,1.15) to[out=160,in=20] (0.9,1.15);
+  \caplabel{5.0}{0.78}{read runs ahead; write only advances on a non-zero};
+  \cellrowst{b}{-1.7}{hot/1,hot/3,hot/12,dead/0,dead/0}
+  \node[note, anchor=east] at (-0.5,-1.7) {after};
+\end{dia}
+
+\textbf{How it works.} Two indices move at different speeds over the same
+array. \texttt{read} visits every slot; \texttt{write} only advances when
+something is actually kept. Because \texttt{write} can never get ahead of
+\texttt{read}, copying \texttt{a[read]} into \texttt{a[write]} can only ever
+overwrite a slot that has already been read --- which is why this is safe to
+do in place with no temporary array.
+
+When the first loop ends, \texttt{write} is the count of non-zero elements, so
+everything from there to the end is tail that must be zeroed.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -23,18 +46,40 @@ public static void moveZeros(int[] a) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(1)$ space.}
-\trap{Swapping instead of copying also works, but only if you swap with the
-write pointer and not with the end of the array --- swapping with the end
-destroys the relative order.}
+\trap{Swapping with the \emph{end} of the array instead of copying to
+\texttt{write} destroys the relative order of the non-zero elements, which the
+statement asks you to preserve.}
 
 % ------------------------------------------------------------------
 \problem{Remove duplicates from a sorted array}{Easy}
 
-The array is sorted ascending. Compact it in place so each value appears once,
-and return the new length. The elements past that length do not matter.
+Compact a sorted array in place so each value appears once; return the new
+length.
 
-\idea{Same write pointer. Because the array is sorted, a duplicate is always
-adjacent to its twin, so compare each element with the last one you kept.}
+\idea{The same write pointer. Because the array is sorted, duplicates are
+always adjacent, so compare each element with the last one you kept.}
+
+\begin{dia}
+  \cellrowst{a}{0}{soft/1,dead/1,soft/2,dead/2,dead/2,soft/3}
+  \idxrow{-0.62}{5}
+  \node[ptr] at (1.6,0.78) {write};
+  \node[ptr] at (3.2,0.78) {read};
+  \draw[flow] (1.6,0.62) -- (1.6,0.44);
+  \draw[flow] (3.2,0.62) -- (3.2,0.44);
+  \cellrowst{b}{-1.7}{hot/1,hot/2,hot/3,dead/2,dead/2,dead/3}
+  \draw[span] (-0.4,-2.3) -- (1.2,-2.3);
+  \caplabel{0.4}{-2.85}{returned length 3; the rest is ignored};
+\end{dia}
+
+\textbf{How it works. }Sortedness is doing the heavy lifting: it guarantees
+that if a value is going to repeat, it repeats immediately. So the test for
+``have I seen this already'' collapses from a set lookup to a single
+comparison with the previous kept element.
+
+That comparison must be against \texttt{a[write - 1]}, not
+\texttt{a[read - 1]}. Once you start overwriting, \texttt{a[read - 1]} may be
+a value that was copied there this pass, so it no longer tells you what the
+last distinct value was.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -48,18 +93,39 @@ public static int dedupeSorted(int[] a) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(1)$ space.}
-\trap{Comparing \texttt{a[read]} with \texttt{a[read-1]} looks equivalent and
-is not: once you start overwriting, \texttt{a[read-1]} may be a value you
-already moved. Compare against the last \emph{kept} element.}
+\trap{Comparing against \texttt{a[read - 1]}. It looks equivalent and passes
+on inputs with no more than two consecutive duplicates.}
 
 % ------------------------------------------------------------------
 \problem{Two-sum in a sorted array}{Easy}
 
-Given a sorted array and a target, return the indices of two values that add to
-the target, or \texttt{null}.
+Return the indices of two values that add to a target, or \texttt{null}.
 
 \idea{One pointer at each end. If the sum is too big the right pointer must come
-in; if too small the left must go out. No other move can help.}
+in; if it is too small the left must go out. No other move can help.}
+
+\begin{dia}
+  \cellrowst{a}{0}{soft/2,cell/7,cell/11,cell/15,soft/19}
+  \idxrow{-0.62}{4}
+  \node[ptr] at (0,0.78) {i};
+  \node[ptr] at (3.2,0.78) {j};
+  \draw[flow] (0,0.62) -- (0,0.44);
+  \draw[flow] (3.2,0.62) -- (3.2,0.44);
+  \node[note, anchor=west] at (3.9,0) {$2+19=21 > 18$};
+  \node[note, anchor=west] at (3.9,-1.0) {so \texttt{j--}: nothing paired};
+  \node[note, anchor=west] at (3.9,-1.5) {with 19 can be small enough};
+\end{dia}
+
+\textbf{How it works.} The argument for why nothing is missed matters more
+than the code. Suppose the sum at the current pair is too large. Every pair
+using the right-hand value and \emph{any} remaining left-hand value is at
+least this large, because the array is sorted ascending and the left pointer
+only ever moves right. So that right-hand value cannot be part of any
+solution, and discarding it loses nothing. The symmetric argument handles the
+too-small case.
+
+Each step eliminates one element, so the search finishes in at most $n$ steps
+--- the same answer a hash map would give, with no extra memory.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -75,10 +141,12 @@ public static int[] twoSumSorted(int[] a, int target) {
 }
 \end{lstlisting}
 
-\cost{$O(n)$ time, $O(1)$ space. On an \emph{unsorted} array use a
-\texttt{HashMap} of value to index instead --- also $O(n)$.}
-\trap{\texttt{a[i] + a[j]} can overflow \texttt{int} with large values. Widen
-to \texttt{long} before adding.}
+On an \emph{unsorted} array this does not apply --- use a \texttt{HashMap}
+from value to index instead, also $O(n)$.
+
+\cost{$O(n)$ time, $O(1)$ space.}
+\trap{\texttt{a[i] + a[j]} overflows \texttt{int} near the limits. Widen to
+\texttt{long} before adding, as above.}
 
 % ------------------------------------------------------------------
 \problem{Maximum subarray sum}{Medium}
@@ -87,8 +155,28 @@ Return the largest sum obtainable from a contiguous, non-empty subarray.
 
 \noindent\texttt{[-2,1,-3,4,-1,2,1,-5,4]} gives 6.
 
-\idea{Kadane. At each element, the best subarray ending here is either this
-element alone or this element extending the best ending just before it.}
+\idea{Kadane. At each element the best subarray ending here is either this
+element alone, or this element extending the best one ending just before it.}
+
+\begin{dia}
+  \cellrowst{a}{0}{cell/-2,cell/1,cell/-3,hot/4,hot/-1,hot/2,hot/1,cell/-5,cell/4}
+  \idxrow{-0.62}{8}
+  \node[note, anchor=east] at (-0.5,0) {input};
+  \cellrowst{e}{-1.5}{cell/-2,cell/1,cell/-2,soft/4,soft/3,soft/5,soft/6,cell/1,cell/5}
+  \node[note, anchor=east] at (-0.5,-1.5) {best ending here};
+  \draw[flow] (4.8,-1.15) -- (4.8,-0.9);
+  \caplabel{4.8}{-2.15}{maximum is 6};
+\end{dia}
+
+\textbf{How it works.} The second row is the whole algorithm. At each index
+you only ever ask one question: is it better to start fresh here, or to carry
+forward what came before? If the running total so far is negative it can only
+hurt, so you drop it --- that is exactly what
+\texttt{Math.max(a[i], endingHere + a[i])} encodes.
+
+Notice that the best overall answer is not necessarily the last value of the
+running total; it is the maximum ever reached. That is why \texttt{best} is
+tracked separately.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -104,18 +192,41 @@ public static int maxSubarraySum(int[] a) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(1)$ space.}
-\trap{Initialising \texttt{best} to \texttt{0} instead of \texttt{a[0]} returns
-0 for an all-negative array, when the answer is the least negative element.
-The problem says non-empty.}
+\trap{Initialising \texttt{best} to \texttt{0} returns 0 on an all-negative
+array, when the answer is the least negative element. The statement says
+non-empty, so the empty subarray is not an option.}
 
 % ------------------------------------------------------------------
 \problem{Rotate an array by k}{Medium}
 
 Shift every element right by $k$ positions, wrapping around, in place.
-\texttt{[1,2,3,4,5]} with $k=2$ becomes \texttt{[4,5,1,2,3]}.
 
 \idea{Reverse the whole array, then reverse the first $k$ and the rest
-separately. Three reversals, no extra array.}
+separately.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.5,0.9) {start};
+  \cellrowst{a}{0.9}{cell/1,cell/2,cell/3,cell/4,cell/5}
+  \node[note, anchor=east] at (-0.5,0) {reverse all};
+  \cellrowst{b}{0}{soft/5,soft/4,soft/3,soft/2,soft/1}
+  \node[note, anchor=east] at (-0.5,-0.9) {reverse each part};
+  \cellrowst{c}{-0.9}{hot/4,hot/5,warm/1,warm/2,warm/3}
+  \draw[span] (-0.4,-1.5) -- (1.2,-1.5);
+  \draw[span] (1.4,-1.5) -- (3.6,-1.5);
+  \caplabel{0.4}{-2.0}{first $k=2$};
+  \caplabel{2.5}{-2.0}{the rest};
+\end{dia}
+
+\textbf{How it works.} Rotating right by $k$ means the last $k$ elements move
+to the front, keeping their order, and the rest follow, keeping theirs.
+Reversing the whole array brings the last $k$ to the front but in the wrong
+order, and does the same to the rest. Reversing each of those two blocks
+individually puts both back in order. Three linear reversals, no second
+array.
+
+The normalisation \texttt{k = ((k \% n) + n) \% n} handles two cases at once:
+$k$ larger than the array, and negative $k$. A single \texttt{\%} leaves a
+negative result negative.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -136,17 +247,41 @@ private static void reverse(int[] a, int i, int j) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(1)$ space.}
-\trap{$k$ can exceed the length, and can be negative. The double-modulo
-normalises both. Without it, \texttt{k = 7} on a length-5 array throws.}
+\trap{Not normalising $k$. With \texttt{k = 7} on a length-5 array,
+\texttt{reverse(a, 0, 6)} indexes past the end and throws.}
 
 % ------------------------------------------------------------------
 \problem{Merge two sorted arrays}{Easy}
 
-Both inputs are sorted ascending. Return one sorted array containing all the
+Both inputs are sorted ascending. Return one sorted array with all the
 elements.
 
-\idea{One index into each, repeatedly take the smaller head. Then drain whichever
-array still has elements.}
+\idea{One index into each; repeatedly take the smaller head, then drain
+whichever array still has elements.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.5,0.9) {a};
+  \cellrowst{a}{0.9}{dead/1,soft/5,cell/9}
+  \node[note, anchor=east] at (-0.5,0) {b};
+  \cellrowst{b}{0}{dead/2,soft/3,cell/8}
+  \node[ptr] at (0.8,1.5) {i};
+  \node[ptr] at (0.8,-0.75) {j};
+  \node[note, anchor=east] at (-0.5,-1.6) {out};
+  \cellrowst{o}{-1.6}{hot/1,hot/2,cell/{},cell/{},cell/{},cell/{}}
+  \node[note, anchor=west] at (4.2,-1.6) {next: compare 5 and 3};
+\end{dia}
+
+\textbf{How it works.} At every step the smallest element not yet taken must
+be at the head of one of the two arrays, because each is sorted. So one
+comparison is enough to decide what goes next --- there is no searching.
+
+The two drain loops after the main one are not optional. The main loop exits
+as soon as \emph{either} array runs out, and whatever remains in the other is
+already sorted and larger than everything written so far, so it can be copied
+straight across.
+
+Using \texttt{<=} rather than \texttt{<} in the comparison keeps the merge
+stable: equal elements from \texttt{a} come out before those from \texttt{b}.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -163,21 +298,40 @@ public static int[] merge(int[] a, int[] b) {
 }
 \end{lstlisting}
 
-\cost{$O(n+m)$ time, $O(n+m)$ space.}
-\trap{Forgetting the two drain loops. The main loop stops as soon as
-\emph{either} array is exhausted, and the remainder of the other one still has
-to be copied.}
+\cost{$O(n+m)$ time and space.}
+\trap{Forgetting the drain loops, which silently truncates the output.}
 
 % ------------------------------------------------------------------
 \problem{Product of the array except self}{Medium}
 
-Return an array where position $i$ holds the product of every element
-\emph{except} \texttt{a[i]}. Do it without division.
-\texttt{[1,2,3,4]} gives \texttt{[24,12,8,6]}.
+Position $i$ of the result holds the product of every element except
+\texttt{a[i]}. No division allowed.
 
-\idea{Two sweeps. Left to right, store the product of everything before $i$.
-Right to left, multiply in the product of everything after $i$, carried in a
-single variable.}
+\idea{Two sweeps. Left to right, store the product of everything \emph{before}
+$i$. Right to left, multiply in the product of everything \emph{after} $i$,
+carried in a single variable.}
+
+\begin{dia}
+  \node[note, anchor=east] at (-0.5,0.9) {input};
+  \cellrowst{a}{0.9}{cell/1,cell/2,cell/3,cell/4}
+  \node[note, anchor=east] at (-0.5,0) {prefix};
+  \cellrowst{p}{0}{soft/1,soft/1,soft/2,soft/6}
+  \draw[flow] (-0.1,0.45) -- (2.5,0.45);
+  \node[note, anchor=east] at (-0.5,-0.9) {suffix};
+  \cellrowst{s}{-0.9}{warm/24,warm/12,warm/4,warm/1}
+  \draw[flow] (2.5,-0.45) -- (-0.1,-0.45);
+  \node[note, anchor=east] at (-0.5,-1.8) {product};
+  \cellrowst{r}{-1.8}{hot/24,hot/12,hot/8,hot/6}
+\end{dia}
+
+\textbf{How it works.} The product of everything except position $i$ splits
+cleanly into two halves: what is to its left and what is to its right. Each
+half is a running product, computable in one sweep.
+
+The implementation is tighter than the diagram suggests. The first loop writes
+the prefix products directly into the output array; the second loop walks
+backwards, multiplying each slot by a running suffix carried in one variable.
+So only the output array is allocated, and the extra space is $O(1)$.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -198,19 +352,39 @@ public static int[] productExceptSelf(int[] a) {
 
 \cost{$O(n)$ time, $O(1)$ extra space beyond the output.}
 \trap{The division shortcut --- total product divided by \texttt{a[i]} ---
-breaks on a single zero and is undefined on two. The problem forbids it for
-exactly that reason.}
+breaks on one zero and is undefined on two. That is exactly why the statement
+forbids it.}
 
 % ------------------------------------------------------------------
 \problem{Container with most water}{Medium}
 
-Each element is the height of a vertical line. Pick two lines so that the
-rectangle between them holds the most water: area is the shorter height times
-the distance.
+Each element is the height of a vertical line. Pick two so the rectangle
+between them holds the most water: the shorter height times the distance.
 
-\idea{Start at the widest pair and close in. The area is limited by the shorter
-line, so moving the \emph{taller} one inwards can never help --- width shrinks
-and the limit does not rise. Move the shorter one.}
+\idea{Start at the widest pair and close in, always moving the \emph{shorter}
+line.}
+
+\begin{dia}
+  \foreach \x/\h in {0/1.8, 0.8/8, 1.6/6, 2.4/2, 3.2/5, 4.0/4, 4.8/8, 5.6/3, 6.4/7} {
+    \draw[edge, line width=2pt] (\x,0) -- (\x,\h*0.17);}
+  \draw[edge] (-0.3,0) -- (6.7,0);
+  \fill[dcool, opacity=0.65] (0.8,0) rectangle (4.8,1.36);
+  \draw[flow] (0.8,1.75) -- (0.8,1.45);
+  \draw[flow] (4.8,1.75) -- (4.8,1.45);
+  \node[ptr] at (0.8,1.95) {i};
+  \node[ptr] at (4.8,1.95) {j};
+  \caplabel{2.8}{-0.45}{area = $\min(8,8)\times 5 = 40$};
+\end{dia}
+
+\textbf{How it works.} The area is limited by the shorter of the two lines, so
+think about what happens when you move each one inward. Moving the
+\emph{taller} line loses width and cannot raise the limiting height --- the
+shorter line is still there, still capping the area. So no better rectangle
+uses that pair of positions, and the move is strictly wasteful.
+
+Moving the shorter line, by contrast, at least gives the height a chance to
+increase. That asymmetry is what makes it safe to discard one candidate per
+step and finish in a single pass.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -227,6 +401,5 @@ public static int maxArea(int[] height) {
 \end{lstlisting}
 
 \cost{$O(n)$ time, $O(1)$ space.}
-\trap{Moving whichever pointer you feel like, or both, breaks the argument.
-The proof that nothing is missed depends on always discarding the shorter
-line.}
+\trap{Moving whichever pointer you feel like, or both at once. The proof that
+nothing is missed depends on always discarding the shorter line.}

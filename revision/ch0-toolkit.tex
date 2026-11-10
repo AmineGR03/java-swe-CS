@@ -1,11 +1,28 @@
-\chapterpage{The Java toolkit}{The twenty things you must not have to think
-about on the day. Read this once; come back to it whenever a drill makes you
-hesitate.}
+\chapterpage{The Java toolkit}{The things you must not have to think about on
+the day. Read this once; come back whenever a drill makes you hesitate.}
 
 \subsection*{Choosing the container}
 \addcontentsline{toc}{subsection}{Choosing the container}
 
-\begin{tabular}{@{}p{4.3cm}p{4.1cm}p{6.6cm}@{}}
+Almost every problem in this book is solved by picking the right container and
+then writing five lines. The question to ask is not ``which collection do I
+know'' but ``what question will I ask of this data, over and over''.
+
+\begin{dia}
+  \node[soft, minimum width=34mm, minimum height=8mm, font=\footnotesize] (q) at (0,0) {what do you ask of it?};
+  \node[warm, minimum width=26mm, minimum height=8mm, font=\footnotesize] (a) at (-3.2,-1.4) {``how many of X?''};
+  \node[warm, minimum width=26mm, minimum height=8mm, font=\footnotesize] (b) at (0,-1.4) {``have I seen X?''};
+  \node[warm, minimum width=26mm, minimum height=8mm, font=\footnotesize] (c) at (3.2,-1.4) {``what is smallest?''};
+  \node[cool, minimum width=26mm, minimum height=8mm, font=\ttfamily\footnotesize] at (-3.2,-2.6) {HashMap};
+  \node[cool, minimum width=26mm, minimum height=8mm, font=\ttfamily\footnotesize] at (0,-2.6) {HashSet};
+  \node[cool, minimum width=26mm, minimum height=8mm, font=\ttfamily\footnotesize] at (3.2,-2.6) {PriorityQueue};
+  \draw[flow] (q) -- (a); \draw[flow] (q) -- (b); \draw[flow] (q) -- (c);
+  \draw[flow] (-3.2,-1.8) -- (-3.2,-2.2);
+  \draw[flow] (0,-1.8) -- (0,-2.2);
+  \draw[flow] (3.2,-1.8) -- (3.2,-2.2);
+\end{dia}
+
+\begin{tabular}{@{}p{4.1cm}p{3.9cm}p{7.0cm}@{}}
 \toprule
 \textbf{You need} & \textbf{Use} & \textbf{Why / cost} \\
 \midrule
@@ -86,16 +103,29 @@ int[][] DIRS = {{-1,0},{1,0},{0,-1},{0,1}};
         first, then mutate; or use \texttt{Iterator.remove()}.
   \item \textbf{A recursive flood fill overflows the stack} at a few tens of
         thousands of cells. Use an explicit \texttt{ArrayDeque}.
-  \item \textbf{\texttt{Arrays.sort} on primitives is a dual-pivot quicksort}
-        with an O(n$^2$) worst case on crafted input; on objects it is a stable
-        merge sort. Boxing to \texttt{Integer[]} is the paranoid fix, and
-        almost never needed.
   \item \textbf{Returning \texttt{null} where an empty array was asked for.}
         Read the return contract twice.
 \end{itemize}
 
 \subsection*{Complexity you should recognise instantly}
 \addcontentsline{toc}{subsection}{Complexity you should recognise instantly}
+
+The constraint line in a statement is the examiner telling you which
+complexity they expect. Read it before you choose an approach, not after your
+first submission times out.
+
+\begin{dia}
+  \draw[edge] (0,0) -- (10.4,0);
+  \foreach \x/\lab in {0/1, 2.6/{10^3}, 5.2/{10^5}, 7.8/{10^7}, 10.4/{10^9}} {
+    \draw[edge] (\x,-0.1) -- (\x,0.1);
+    \node[idx] at (\x,-0.4) {$\lab$};}
+  \node[note] at (5.2,-0.95) {size of the input, $n$};
+  \node[cool, minimum width=46mm, minimum height=6mm, font=\footnotesize] at (2.3,0.75) {$O(n)$ or $O(n\log n)$ --- safe};
+  \node[warm, minimum width=24mm, minimum height=6mm, font=\footnotesize] at (6.0,0.75) {$O(n\sqrt{n})$};
+  \node[hot, minimum width=30mm, minimum height=6mm, font=\footnotesize] at (8.9,0.75) {$O(n^2)$ --- too slow};
+  \draw[flow] (5.2,0.42) -- (5.2,0.12);
+  \node[note, anchor=west] at (5.4,0.3) {$n=10^5$ is the usual cut-off};
+\end{dia}
 
 \begin{tabular}{@{}llp{6.4cm}@{}}
 \toprule
@@ -109,7 +139,18 @@ Flood fill / BFS on a grid & $O(\text{rows}\times\text{cols})$ & $10^7$ cells \\
 \bottomrule
 \end{tabular}
 
-\medskip
-\noindent If the constraints say $n \le 200\,000$, an $O(n^2)$ solution will
-time out. That number in a statement is the examiner telling you the intended
-complexity.
+\subsection*{How to read a diagram in this book}
+\addcontentsline{toc}{subsection}{How to read a diagram in this book}
+
+Every problem has one. The conventions are constant throughout:
+
+\begin{dia}
+  \node[cell] at (0,0) {7};
+  \node[note, anchor=west] at (0.5,0) {untouched data};
+  \node[soft] at (4.6,0) {7};
+  \node[note, anchor=west] at (5.1,0) {being looked at now};
+  \node[hot] at (0,-0.95) {7};
+  \node[note, anchor=west] at (0.5,-0.95) {the answer, or the match};
+  \node[dead] at (4.6,-0.95) {7};
+  \node[note, anchor=west] at (5.1,-0.95) {discarded, or already used};
+\end{dia}

@@ -5,17 +5,52 @@ and most of the difficulty disappears.}
 % ------------------------------------------------------------------
 \problem{Rotate a square matrix 90 degrees clockwise}{Medium}
 
-Rotate in place. \texttt{[[1,2],[3,4]]} becomes \texttt{[[3,1],[4,2]]}.
+Rotate in place.
 
-\idea{Transpose (reflect across the main diagonal), then reverse each row. Two
-simple passes beat one confusing index formula.}
+\idea{Transpose --- reflect across the main diagonal --- then reverse each
+row. Two simple passes beat one confusing index formula.}
+
+\begin{dia}
+  \foreach \r/\a/\b/\c in {0/1/2/3, 1/4/5/6, 2/7/8/9} {
+    \foreach \v/\ci in {\a/0, \b/1, \c/2} {
+      \node[cell] at (\ci*0.8, -\r*0.8) {\v};}}
+  \node[hot] at (0,0) {1};  \node[hot] at (0.8,-0.8) {5}; \node[hot] at (1.6,-1.6) {9};
+  \node[warm] at (0.8,0) {2}; \node[warm] at (1.6,0) {3}; \node[warm] at (1.6,-0.8) {6};
+  \draw[back] (0.8,-0.15) to[out=-80,in=170] (0.68,-0.68);
+  \node[note] at (0.8,-2.2) {start};
+
+  \foreach \r/\a/\b/\c in {0/1/4/7, 1/2/5/8, 2/3/6/9} {
+    \foreach \v/\ci in {\a/0, \b/1, \c/2} {
+      \node[cell] at (3.6+\ci*0.8, -\r*0.8) {\v};}}
+  \node[note] at (4.4,-2.2) {transposed};
+
+  \foreach \r/\a/\b/\c in {0/7/4/1, 1/8/5/2, 2/9/6/3} {
+    \foreach \v/\ci in {\a/0, \b/1, \c/2} {
+      \node[cell] at (7.2+\ci*0.8, -\r*0.8) {\v};}}
+  \node[note] at (8.0,-2.2) {rotated};
+
+  \draw[flow] (2.6,-0.8) -- (3.1,-0.8);
+  \draw[flow] (6.2,-0.8) -- (6.7,-0.8);
+\end{dia}
+
+\textbf{How it works.} The transpose swaps \texttt{m[i][j]} with
+\texttt{m[j][i]}, which handles two cells at once. That is why the inner loop
+starts at \texttt{j = i + 1}: it visits only the strict upper triangle,
+shaded above. Starting at \texttt{j = 0} would visit each pair twice and undo
+every swap, leaving the matrix unchanged --- a bug with no exception and no
+symptom except a wrong answer.
+
+The diagonal is excluded too, correctly: \texttt{m[i][i]} swaps with itself.
+
+After the transpose each row holds a column of the original, but in the wrong
+direction, so reversing every row finishes the rotation.
 
 \solheading
 \begin{lstlisting}[style=java]
 public static void rotate90(int[][] m) {
     int n = m.length;
     for (int i = 0; i < n; i++)
-        for (int j = i + 1; j < n; j++) {      // j starts at i+1
+        for (int j = i + 1; j < n; j++) {      // strict upper triangle
             int t = m[i][j]; m[i][j] = m[j][i]; m[j][i] = t;
         }
     for (int[] row : m)
@@ -25,18 +60,50 @@ public static void rotate90(int[][] m) {
 }
 \end{lstlisting}
 
+In the second loop, \texttt{row} is a reference to the real row, so writing
+\texttt{row[i]} modifies the matrix. The condition \texttt{i < j} rather than
+\texttt{i <= j} skips the pointless self-swap at the centre of an odd-length
+row.
+
 \cost{$O(n^2)$ time, $O(1)$ space.}
-\trap{Starting the inner transpose loop at \texttt{j = 0} swaps every pair
-twice and leaves the matrix unchanged. It must start at \texttt{i + 1}.}
+\trap{\texttt{j = 0} in the transpose loop. For counter-clockwise, reverse the
+rows \emph{first} and then transpose.}
 
 % ------------------------------------------------------------------
 \problem{Spiral traversal}{Medium}
 
-Return the elements in spiral order: left to right along the top, down the
-right side, right to left along the bottom, up the left side, then inwards.
+Return the elements in spiral order.
 
-\idea{Four moving boundaries. After walking each edge, shrink that boundary, and
-check before the two ``return'' edges that the boundaries have not crossed.}
+\idea{Four moving boundaries. Walk an edge, shrink that boundary, and check
+before the two return edges that the boundaries have not crossed.}
+
+\begin{dia}
+  \foreach \r in {0,1,2} {
+    \foreach \c in {0,1,2,3} {
+      \node[cell] at (\c*0.8, -\r*0.8) {};}}
+  \foreach \c in {0,1,2,3} {\node[hot] at (\c*0.8,0) {};}
+  \foreach \r in {1,2} {\node[warm] at (2.4,-\r*0.8) {};}
+  \foreach \c in {0,1,2} {\node[cool] at (\c*0.8,-1.6) {};}
+  \node[soft] at (0,-0.8) {};
+  \draw[flow] (-0.1,0.5) -- (2.5,0.5);
+  \draw[flow] (2.9,-0.1) -- (2.9,-1.5);
+  \draw[flow] (2.5,-2.1) -- (-0.1,-2.1);
+  \draw[flow] (-0.5,-1.5) -- (-0.5,-0.4);
+  \node[note, anchor=west] at (3.4,0) {1. top row, left to right};
+  \node[note, anchor=west] at (3.4,-0.55) {2. right column, down};
+  \node[note, anchor=west] at (3.4,-1.1) {3. bottom row, right to left};
+  \node[note, anchor=west] at (3.4,-1.65) {4. left column, up};
+\end{dia}
+
+\textbf{How it works.} Keep four indices --- \texttt{top}, \texttt{bottom},
+\texttt{left}, \texttt{right} --- naming the rectangle still to be walked.
+Each edge is traversed and then its boundary moves inwards by one, shrinking
+the rectangle. When the boundaries cross, everything has been emitted.
+
+The two guards exist because of odd shapes. If the remaining rectangle is a
+single row, the top-row pass already emitted it; walking the bottom row would
+emit it again, backwards. \texttt{if (top <= bottom)} prevents that, and the
+symmetric guard handles a single column.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -65,18 +132,47 @@ public static List<Integer> spiral(int[][] m) {
 \end{lstlisting}
 
 \cost{$O(\text{rows}\times\text{cols})$ time.}
-\trap{Omitting the two guards duplicates a row or a column on non-square
-matrices --- a single remaining row would be walked both left-to-right and
-right-to-left.}
+\trap{Omitting the guards. Square matrices hide the bug; a $1\times n$ or
+$n\times 1$ input exposes it immediately.}
 
 % ------------------------------------------------------------------
 \problem{Count islands}{Medium}
 
-The grid holds \texttt{'1'} for land and \texttt{'0'} for water. Count the
-connected groups of land, using four-way adjacency.
+\texttt{'1'} is land, \texttt{'0'} is water. Count the connected groups of
+land, four-way adjacency.
 
-\idea{Scan every cell. The first time you touch a piece of land, increment the
-count and flood the whole island so it is never counted again.}
+\idea{Scan every cell. The first time you touch land, increment the count and
+flood the whole island so it is never counted again.}
+
+\begin{dia}
+  \foreach \r/\a/\b/\c/\d/\e in {0/1/1/0/0/1, 1/1/0/0/0/1, 2/0/0/1/0/0, 3/0/0/1/1/0} {
+    \foreach \v/\ci in {\a/0, \b/1, \c/2, \d/3, \e/4} {
+      \node[cell] at (\ci*0.8, -\r*0.8) {\v};}}
+  \node[hot] at (0,0) {1};    \node[hot] at (0.8,0) {1};   \node[hot] at (0,-0.8) {1};
+  \node[warm] at (3.2,0) {1}; \node[warm] at (3.2,-0.8) {1};
+  \node[cool] at (1.6,-1.6) {1}; \node[cool] at (1.6,-2.4) {1}; \node[cool] at (2.4,-2.4) {1};
+  \node[note, anchor=west] at (4.2,0) {island 1, found at (0,0)};
+  \node[note, anchor=west] at (4.2,-0.8) {island 2, found at (0,4)};
+  \node[note, anchor=west] at (4.2,-1.6) {island 3, found at (2,2)};
+  \caplabel{1.6}{-3.1}{diagonals never connect};
+\end{dia}
+
+\textbf{How it works.} Two loops doing different jobs. The outer double loop
+is a \emph{scan}: it visits every cell once looking for land nobody has
+reached. The inner \texttt{while} is a \emph{flood}: it erases the entire
+island the scan just landed on.
+
+The erasing is what makes the counting correct. After an island is flooded,
+all of its cells are \texttt{'0'}, so when the scan later walks over them the
+\texttt{continue} on line 8 skips them. The counter therefore fires once per
+island, not once per land cell.
+
+Note where the marking happens: a cell is set to \texttt{'0'} as it is
+\emph{pushed}, not when it is popped. That keeps the invariant ``a cell is in
+the queue at most once''. Marking on pop instead lets a cell be pushed by each
+of its neighbours before its first pop --- up to four copies each, so four
+times the memory and work. Bounded, but it is the usual cause of a
+memory-limit failure on a large grid.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -107,19 +203,44 @@ public static int countIslands(char[][] grid) {
 }
 \end{lstlisting}
 
+The bounds check must come before the value check --- Java evaluates in order,
+so reading \texttt{grid[nr][nc]} first throws on any edge cell.
+
 \cost{$O(\text{rows}\times\text{cols})$ time and space.}
-\trap{Marking a cell visited when you \emph{pop} it rather than when you
-\emph{push} it lets the same cell enter the queue many times, and a large
-open grid then blows up. Mark on push, always.}
+\trap{This function is \emph{destructive}: it overwrites the caller's grid
+with water. That is a deliberate trick --- the input doubles as the visited
+set --- but if the caller needs the grid afterwards, copy it first or use a
+separate \texttt{boolean[][]}.}
 
 % ------------------------------------------------------------------
 \problem{Set matrix zeroes}{Medium}
 
-If any cell is zero, set its whole row and column to zero. The catch is doing
-it without a second matrix.
+If any cell is zero, set its whole row and column to zero, without a second
+matrix.
 
 \idea{Two passes. First record \emph{which} rows and columns must be cleared;
-only then clear them. Clearing as you go turns the whole matrix to zero.}
+only then clear them.}
+
+\begin{dia}
+  \foreach \r in {0,1,2} {
+    \foreach \c in {0,1,2,3} {
+      \node[cell] at (\c*0.8, -\r*0.8) {1};}}
+  \node[hot] at (1.6,-0.8) {0};
+  \foreach \c in {0,1,3} {\node[warm] at (\c*0.8,-0.8) {0};}
+  \foreach \r in {0,2} {\node[warm] at (1.6,-\r*0.8) {0};}
+  \node[note, anchor=west] at (3.4,-0.8) {one zero clears its row};
+  \node[note, anchor=west] at (3.4,-1.35) {and its column};
+  \caplabel{1.2}{-2.3}{record first, clear second --- or the zeros cascade};
+\end{dia}
+
+\textbf{How it works.} The naive one-pass version fails because the zeros it
+writes are indistinguishable from the original ones. The pass continues, reads
+a zero it just wrote, and clears that row too, until the whole matrix is
+zero.
+
+Separating detection from mutation fixes it. Two boolean arrays remember the
+rows and columns to clear, and nothing is written until every original zero
+has been seen.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -139,12 +260,11 @@ public static void setZeroes(int[][] m) {
 }
 \end{lstlisting}
 
-\cost{$O(\text{rows}\times\text{cols})$ time, $O(\text{rows}+\text{cols})$
-space.}
-\trap{The naive one-pass version writes zeros that the rest of the pass then
-reads as original zeros, cascading until everything is zero. The $O(1)$-space
-variant stores the flags in row 0 and column 0 and needs a separate flag for
-each of those --- more clever than it is worth under time pressure.}
+\cost{$O(\text{rows}\times\text{cols})$ time,
+$O(\text{rows}+\text{cols})$ space.}
+\trap{The $O(1)$-space variant stores the flags in row 0 and column 0 and
+needs a separate flag for each of those. It is more clever than it is worth
+under time pressure --- write the two arrays.}
 
 % ------------------------------------------------------------------
 \problem{Diagonal sums}{Easy}
@@ -152,8 +272,26 @@ each of those --- more clever than it is worth under time pressure.}
 Sum the main diagonal and the anti-diagonal of a square matrix, counting the
 centre of an odd-sized matrix once.
 
-\idea{One loop. At step $i$ the two diagonal cells are $m[i][i]$ and
-$m[i][n-1-i]$; they coincide exactly when $i = n-1-i$.}
+\idea{One loop. At step $i$ the two cells are $m[i][i]$ and $m[i][n-1-i]$;
+they coincide exactly when $i = n-1-i$.}
+
+\begin{dia}
+  \foreach \r in {0,1,2} {
+    \foreach \c in {0,1,2} {
+      \node[cell] at (\c*0.8, -\r*0.8) {1};}}
+  \node[hot] at (0,0) {1};    \node[hot] at (1.6,-1.6) {1};
+  \node[warm] at (1.6,0) {1}; \node[warm] at (0,-1.6) {1};
+  \node[soft] at (0.8,-0.8) {1};
+  \node[note, anchor=west] at (2.4,0) {main diagonal};
+  \node[note, anchor=west] at (2.4,-0.8) {centre: on both, count once};
+  \node[note, anchor=west] at (2.4,-1.6) {anti-diagonal};
+\end{dia}
+
+\textbf{How it works.} Both diagonals have exactly $n$ cells and can be
+indexed by the same loop variable, so no nested loop is needed. The only
+subtlety is the shared centre cell of an odd matrix, which belongs to both
+diagonals and must contribute once --- the guard \texttt{i != n - 1 - i}
+handles it.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -168,19 +306,48 @@ public static long diagonalSum(int[][] m) {
 }
 \end{lstlisting}
 
-\cost{$O(n)$ time, $O(1)$ space.}
-\trap{Double-counting the centre cell of an odd matrix. And the total can
-exceed \texttt{int} --- use \texttt{long}.}
+\cost{$O(n)$ time, $O(1)$ space --- note this is linear, not quadratic: you
+never touch the other $n^2 - 2n$ cells.}
+\trap{Double-counting the centre. The total can also exceed \texttt{int}.}
 
 % ------------------------------------------------------------------
 \problem{Search a row-and-column sorted matrix}{Medium}
 
-Every row is sorted left to right and every column top to bottom. Decide
-whether a target is present.
+Every row is sorted left to right and every column top to bottom. Is the
+target present?
 
-\idea{Start at the top-right corner. That cell is the largest in its row and the
-smallest in its column, so a comparison always eliminates an entire row or an
-entire column.}
+\idea{Start at the top-right corner. That cell is the largest in its row and
+the smallest in its column, so one comparison eliminates a whole row or a
+whole column.}
+
+\begin{dia}
+  \foreach \r/\a/\b/\c/\d in {0/1/4/7/11, 1/2/5/8/12, 2/3/6/9/16} {
+    \foreach \v/\ci in {\a/0, \b/1, \c/2, \d/3} {
+      \node[cell] at (\ci*0.8, -\r*0.8) {\v};}}
+  \node[soft] at (2.4,0) {11};
+  \node[soft] at (1.6,0) {7};
+  \node[hot] at (1.6,-0.8) {8};
+  \draw[flow] (2.4,0.5) -- (2.4,0.2);
+  \node[ptr] at (2.4,0.72) {start};
+  \draw[flow] (2.1,0) -- (1.9,0);
+  \draw[flow] (1.6,-0.45) -- (1.6,-0.6);
+  \node[note, anchor=west] at (3.3,0) {$11 > 8$: drop the column};
+  \node[note, anchor=west] at (3.3,-0.5) {$7 < 8$: drop the row};
+  \node[note, anchor=west] at (3.3,-1.0) {found};
+\end{dia}
+
+\textbf{How it works.} The top-right corner is the only starting point that
+gives information. It is the maximum of its row, so if it is larger than the
+target, the target cannot be anywhere in that column --- every cell below is
+larger still. And it is the minimum of its column, so if it is smaller than
+the target, nothing in that row can match.
+
+Either way one comparison deletes an entire row or column, so the search
+finishes in at most $\text{rows} + \text{cols}$ steps.
+
+Starting at the top-left fails because both moves lead to larger values and
+nothing can be eliminated. The bottom-left corner works by the same argument
+as the top-right.
 
 \solheading
 \begin{lstlisting}[style=java]
@@ -197,6 +364,6 @@ public static boolean contains(int[][] m, int target) {
 \end{lstlisting}
 
 \cost{$O(\text{rows}+\text{cols})$ time, $O(1)$ space.}
-\trap{Starting at the top-left corner gives no information: both moves lead to
-larger values, so you cannot eliminate anything. The corner choice is the
-entire trick.}
+\trap{Binary-searching each row is $O(\text{rows}\log\text{cols})$ and also
+correct, but it ignores the column ordering. The staircase walk is simpler and
+faster.}

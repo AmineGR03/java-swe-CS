@@ -13,7 +13,7 @@ collections, careful reading, and edge cases handled without being reminded.
 | **Part A** — General Coding | 4 independent tasks · 70 min · 50 pts |
 | **Part B** — Industry Coding | 1 problem, 4 progressive levels · 90 min · 50 pts |
 | **Grader** | 117 checks, zero dependencies beyond a JDK |
-| **Revision book** | 60 LeetCode-style problems with full Java solutions |
+| **Revision book** | 60 LeetCode-style problems, each with a diagram and a worked solution |
 
 ---
 
@@ -82,9 +82,10 @@ Three documents, meant to be used in this order.
 
 ### 1. `Revision-Book.pdf` — start here
 
-**41 pages, 60 problems, graded easy to hard.** Every problem has a complete
-Java solution, its complexity, and a **Trap** note naming the specific mistake
-that breaks submissions.
+**56 pages, 60 problems, graded easy to hard.** Every problem has a diagram,
+a full walkthrough of how the solution works, a complete Java solution, its
+complexity, and a **Trap** note naming the specific mistake that breaks
+submissions.
 
 | Chapter | Content |
 |---|---|
@@ -182,7 +183,7 @@ Level 1. Budget for that; design so it is a small refactor.
 ```
 ASSESSMENT.md             problem statements (source of truth)
 SOLUTIONS.md              the debrief
-Revision-Book.pdf         60 drills with solutions
+Revision-Book.pdf         60 drills, each with a diagram and a worked solution
 Assessment-Questions.pdf  the statements, printable
 Assessment-Solutions.pdf  the debrief, printable
 
@@ -209,6 +210,9 @@ python tools/md2pdf.py ASSESSMENT.md Assessment-Questions.pdf
 ```bash
 cd revision && pdflatex main.tex && pdflatex main.tex
 ```
+
+The diagrams are TikZ, drawn inline in the chapter sources; `main.tex` holds
+the shared styles and the `dia` environment they use.
 
 Run `pdflatex` twice so the table of contents resolves.
 

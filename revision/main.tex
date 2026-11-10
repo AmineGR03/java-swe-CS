@@ -13,6 +13,8 @@
 \usepackage{amssymb}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,decorations.pathreplacing}
 \usepackage[hidelinks,bookmarks,bookmarksnumbered]{hyperref}
 
 % ----------------------------------------------------------------- colours
@@ -109,6 +111,58 @@
 \newcommand{\cost}[1]{\par\noindent\textbf{Cost.}\ #1\par}
 \newcommand{\trap}[1]{\par\smallskip\noindent\textbf{\color{bad}Trap.}\ #1\par}
 \newcommand{\alsoknown}[1]{\par\noindent{\small\color{muted}Also appears as: #1}\par}
+
+% ----------------------------------------------------------------- diagrams
+\definecolor{dline}{HTML}{BFC6D1}
+\definecolor{dplain}{HTML}{FFFFFF}
+\definecolor{dsoft}{HTML}{EDF2FA}
+\definecolor{dhot}{HTML}{FAE0D4}
+\definecolor{dwarm}{HTML}{FBEED5}
+\definecolor{dcool}{HTML}{DFF2EA}
+\definecolor{ddead}{HTML}{EFEFEA}
+
+\tikzset{
+  cell/.style      ={draw=dline, line width=.5pt, fill=dplain, minimum size=7.4mm,
+                     inner sep=0pt, font=\ttfamily\small, text=ink},
+  soft/.style      ={cell, fill=dsoft},
+  hot/.style       ={cell, fill=dhot},
+  warm/.style      ={cell, fill=dwarm},
+  cool/.style      ={cell, fill=dcool},
+  dead/.style      ={cell, fill=ddead, text=muted},
+  disc/.style      ={draw=dline, line width=.5pt, fill=dsoft, circle,
+                     minimum size=7.4mm, inner sep=0pt, font=\ttfamily\small, text=ink},
+  idx/.style       ={font=\scriptsize, text=muted, inner sep=1.5pt},
+  ptr/.style       ={font=\footnotesize\bfseries, text=accent, inner sep=1.5pt},
+  note/.style      ={font=\footnotesize, text=muted, inner sep=2pt},
+  flow/.style      ={-{Stealth[length=4.5pt,width=3.5pt]}, draw=accent, line width=.7pt},
+  back/.style      ={-{Stealth[length=4.5pt,width=3.5pt]}, draw=muted, line width=.6pt,
+                     densely dashed},
+  edge/.style      ={draw=dline, line width=.6pt},
+  span/.style      ={decorate, decoration={brace, amplitude=4pt, raise=2pt},
+                     draw=accent, line width=.6pt},
+}
+
+% A centred diagram block.
+\newenvironment{dia}
+  {\par\addvspace{9pt}\begin{center}\begin{tikzpicture}}
+  {\end{tikzpicture}\end{center}\addvspace{3pt}}
+
+% \cellrow{prefix}{y}{a,b,c}  -- a horizontal strip of cells, nodes <prefix>-0, -1, ...
+\newcommand{\cellrow}[3]{%
+  \foreach \cv [count=\ci from 0] in {#3} {%
+    \node[cell] (#1-\ci) at (\ci*0.8, #2) {\cv};}}
+
+% \cellrowst{prefix}{y}{style/value, style/value, ...}  -- same, per-cell styles
+\newcommand{\cellrowst}[3]{%
+  \foreach \cs/\cv [count=\ci from 0] in {#3} {%
+    \node[\cs] (#1-\ci) at (\ci*0.8, #2) {\cv};}}
+
+% \idxrow{y}{last index}  -- index numbers under a strip
+\newcommand{\idxrow}[2]{%
+  \foreach \ci in {0,...,#2} {\node[idx] at (\ci*0.8, #1) {\ci};}}
+
+% \caplabel{x}{y}{text}  -- a small grey annotation
+\newcommand{\caplabel}[3]{\node[note] at (#1, #2) {#3};}
 
 \emergencystretch=2.5em
 \hbadness=2000
